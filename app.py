@@ -45,10 +45,15 @@ try:
     
 except (KeyError, Exception) as e:
     # Running without authentication (development mode or secrets not configured)
+    st.warning(f"⚠️ Authentication Error: {str(e)}")
+    st.info("Running without authentication (development mode)")
+    
     # Try to get API key from old general section
     try:
         user_api_key = st.secrets["general"]["rapidapi_key"]
-    except:
+        st.success("✅ API Key loaded from general section")
+    except Exception as e2:
+        st.error(f"❌ Could not load API key: {str(e2)}")
         user_api_key = None
 
 # Layout Configuration
