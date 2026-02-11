@@ -7,6 +7,11 @@ from yaml.loader import SafeLoader
 
 # Authentication must come FIRST before any st. commands
 # Load credentials from secrets
+name = None
+authentication_status = None
+username = None
+user_api_key = None
+
 try:
     credentials = {
         'cookie': st.secrets['credentials']['cookie'].to_dict(),
@@ -14,8 +19,8 @@ try:
     }
     
     # Convert usernames section
-    for username, user_data in st.secrets['credentials']['usernames'].items():
-        credentials['usernames'][username] = user_data.to_dict()
+    for username_key, user_data in st.secrets['credentials']['usernames'].items():
+        credentials['usernames'][username_key] = user_data.to_dict()
     
     # Create authenticator
     authenticator = stauth.Authenticate(
@@ -38,10 +43,13 @@ try:
     # If authenticated, get the user's API key
     user_api_key = credentials['usernames'][username]['api_key']
     
-except Exception as e:
-    st.error(f"Authentication setup error: {e}")
-    st.info("Running without authentication (development mode)")
-    user_api_key = None
+except (KeyError, Exception) as e:
+    # Running without authentication (development mode or secrets not configured)
+    # Try to get API key from old general section
+    try:
+        user_api_key = st.secrets["general"]["rapidapi_key"]
+    except:
+        user_api_key = None
 
 # Layout Configuration
 st.set_page_config(page_title="Viral UGC Discovery", page_icon="🚀", layout="wide")
@@ -83,9 +91,14 @@ if 'active_min_viral' not in st.session_state:
 
 # Sidebar Filters
 with st.sidebar:
-    # Show logged in user
-    st.success(f"👤 Logged in as: **{name}**")
-    authenticator.logout('Logout', 'sidebar')
+    # Show logged in user or dev mode
+    if authentication_status:
+        st.success(f"👤 Logged in as: **{name}**")
+        authenticator.logout('Logout', 'sidebar')
+    else:
+        st.info("🔧 Development Mode (No Auth)")
+        if not user_api_key:
+            st.warning("⚠️ No API Key configured")
     
     st.divider()
     
