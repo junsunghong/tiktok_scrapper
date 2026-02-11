@@ -101,7 +101,8 @@ with st.sidebar:
     # Show logged in user or dev mode
     if authentication_status:
         st.success(f"👤 Logged in as: **{name}**")
-        authenticator.logout('Logout', 'sidebar')
+        if authenticator:
+            authenticator.logout(location='sidebar')
     else:
         st.info("🔧 Development Mode (No Auth)")
         if not user_api_key:
