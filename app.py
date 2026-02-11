@@ -203,26 +203,7 @@ if len(df) == 0:
     st.error(f"⚠️ **No videos found!**")
     
     if status_msg != "No Data" and status_msg != "Success":
-        if "subscribed" in status_msg or "403" in status_msg:
-            st.error("🚨 **API Subscription Error**")
-            st.markdown(f"""
-            Your API Key is valid, but you are not explicitly **subscribed** to this specific API provider.
-            
-            **Debug Info:**
-            - **Key Used:** `{final_api_key[:5]}...` (Check if this matches your RapidAPI dashboard)
-            - **Key Length:** `{len(final_api_key)}` (Should be around 50 chars)
-            
-            **Possible Fix:**
-            1. **Sanitization:** I just added code to remove spaces. Try checking again.
-            2. **New Key:** If it still fails, go to RapidAPI -> "Security" -> "Add New Key" and try the new one.
-            
-            1. Go to the link above.
-            2. Click **Subscribe** (Basic/Free plan).
-            3. *If already subscribed,* check if you are using the correct **Application** key in RapidAPI.
-            4. **Restart this app** after verifying.
-            """)
-        else:
-            st.error(f"**Detailed Error:** {status_msg}")
+        st.error(f"**API Error:** {status_msg}")
     
     st.markdown("""
     Possible reasons:
