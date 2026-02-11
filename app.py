@@ -60,11 +60,16 @@ with st.sidebar:
             api_key_input = secrets_key
         
         st.header("🔍 Filters")
-        hashtag_input = st.text_input("Niche / Hashtag", value="#SaaS", help="Enter any hashtag (e.g. #AI, #Marketing, #Crypto)")
+        
+        # Default to previous value if exists, else default
+        default_hashtag = st.session_state.active_hashtag if st.session_state.active_hashtag else "#SaaS"
+        default_score = st.session_state.active_min_viral
+        
+        hashtag_input = st.text_input("Niche / Hashtag", value=default_hashtag, help="Enter any hashtag (e.g. #AI, #Marketing, #Crypto)")
         if not hashtag_input.startswith("#"):
             hashtag_input = f"#{hashtag_input}"
             
-        viral_score_input = st.slider("Minimum Viral Score (Views/Followers)", 0.0, 50.0, 5.0)
+        viral_score_input = st.slider("Minimum Viral Score (Views/Followers)", 0.0, 50.0, float(default_score))
         
         # Search Button
         search_submitted = st.form_submit_button("Search 🔎")
