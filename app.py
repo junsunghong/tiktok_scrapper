@@ -198,7 +198,19 @@ if len(df) == 0:
     st.error(f"⚠️ **No videos found!**")
     
     if status_msg != "No Data" and status_msg != "Success":
-        st.error(f"**Detailed Error:** {status_msg}")
+        if "subscribed" in status_msg or "403" in status_msg:
+            st.error("🚨 **API Subscription Error**")
+            st.markdown("""
+            Your API Key is valid, but you are not explicitly **subscribed** to this specific API provider.
+            
+            👉 **[Click here to Subscribe (Free Tier)](https://rapidapi.com/tikwm-tikwm-default/api/tiktok-scraper7/pricing)**
+            
+            1. Go to the link above.
+            2. Click **Subscribe** (Basic/Free plan).
+            3. **Restart this app** after subscribing.
+            """)
+        else:
+            st.error(f"**Detailed Error:** {status_msg}")
     
     st.markdown("""
     Possible reasons:
