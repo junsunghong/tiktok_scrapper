@@ -48,6 +48,9 @@ with st.sidebar:
     secrets_key = None
     try:
         secrets_key = st.secrets["general"]["rapidapi_key"]
+        # Sanitize key (remove whitespace/newlines)
+        if secrets_key:
+            secrets_key = secrets_key.strip()
         st.success("API Key loaded from secrets ✨")
     except (FileNotFoundError, KeyError):
         pass
@@ -56,6 +59,8 @@ with st.sidebar:
         # API Key Input (if not in secrets)
         if not secrets_key:
             api_key_input = st.text_input("RapidAPI Key (TikAPI)", type="password", help="Get key from rapidapi.com/tikwm-tikwm-default/api/tiktok-scraper7")
+            if api_key_input:
+                api_key_input = api_key_input.strip()
         else:
             api_key_input = secrets_key
         
@@ -205,8 +210,11 @@ if len(df) == 0:
             
             **Debug Info:**
             - **Key Used:** `{final_api_key[:5]}...` (Check if this matches your RapidAPI dashboard)
+            - **Key Length:** `{len(final_api_key)}` (Should be around 50 chars)
             
-            👉 **[Click here to Subscribe (Free Tier)](https://rapidapi.com/tikwm-tikwm-default/api/tiktok-scraper7/pricing)**
+            **Possible Fix:**
+            1. **Sanitization:** I just added code to remove spaces. Try checking again.
+            2. **New Key:** If it still fails, go to RapidAPI -> "Security" -> "Add New Key" and try the new one.
             
             1. Go to the link above.
             2. Click **Subscribe** (Basic/Free plan).
