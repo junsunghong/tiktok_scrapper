@@ -71,10 +71,6 @@ with st.sidebar:
         # Simplified Inputs (Selectbox)
         viral_score_input = st.selectbox("Min Viral Score", [1, 3, 5], index=0)
         
-        # New Options
-        sort_map = {"Relevance (Default)": 0, "Likes (Popular)": 1, "Date (Newest)": 2}
-        sort_label = st.selectbox("Sort By", list(sort_map.keys()), index=0)
-        
         # Simplified Limit (Selectbox)
         search_limit = st.selectbox("Max Videos to Scan", [30, 50, 100], index=0)
 
@@ -84,13 +80,10 @@ with st.sidebar:
         if search_submitted:
             st.session_state.active_hashtag = hashtag_input
             st.session_state.active_min_viral = viral_score_input
-            st.session_state.active_sort = sort_map[sort_label]
             st.session_state.active_limit = search_limit
             st.rerun()
 
     # Initialize new session state defaults if they don't exist
-    if 'active_sort' not in st.session_state:
-        st.session_state.active_sort = 0
     if 'active_limit' not in st.session_state:
         st.session_state.active_limit = 30
 
@@ -113,12 +106,13 @@ if not st.session_state.active_hashtag:
 
 # Data Fetching (Uses Session State Hashtag)
 @st.cache_data(ttl=3600)
-def load_data(hashtag, key, limit, sort_type):
+def load_data(hashtag, key, limit):
     if key:
         from real_data_fetcher import RealDataFetcher
         fetcher = RealDataFetcher(key)
         try:
-            data = fetcher.fetch_posts(hashtag, limit=limit, sort_type=sort_type)
+            # Always use Default Sort (0)
+            data = fetcher.fetch_posts(hashtag, limit=limit, sort_type=0)
             if not data.empty:
                 return data, "Real API", "Success"
             else:
@@ -130,7 +124,7 @@ def load_data(hashtag, key, limit, sort_type):
     fetcher = MockDataFetcher()
     return fetcher.fetch_posts(hashtag, limit=limit), "Mock Data", "Success"
 
-df, source_label, status_msg = load_data(st.session_state.active_hashtag, final_api_key, st.session_state.active_limit, st.session_state.active_sort)
+df, source_label, status_msg = load_data(st.session_state.active_hashtag, final_api_key, st.session_state.active_limit)
 
 if status_msg == "Success":
     if source_label == "Real API":
