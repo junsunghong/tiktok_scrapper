@@ -1,6 +1,47 @@
 import streamlit as st
 import pandas as pd
 from data_fetcher import MockDataFetcher
+import streamlit_authenticator as stauth
+import yaml
+from yaml.loader import SafeLoader
+
+# Authentication must come FIRST before any st. commands
+# Load credentials from secrets
+try:
+    credentials = {
+        'cookie': st.secrets['credentials']['cookie'].to_dict(),
+        'usernames': {}
+    }
+    
+    # Convert usernames section
+    for username, user_data in st.secrets['credentials']['usernames'].items():
+        credentials['usernames'][username] = user_data.to_dict()
+    
+    # Create authenticator
+    authenticator = stauth.Authenticate(
+        credentials,
+        st.secrets['credentials']['cookie']['name'],
+        st.secrets['credentials']['cookie']['key'],
+        int(st.secrets['credentials']['cookie']['expiry_days'])
+    )
+    
+    # Render login widget
+    name, authentication_status, username = authenticator.login('Login', 'main')
+    
+    if authentication_status == False:
+        st.error('Username/password is incorrect')
+        st.stop()
+    elif authentication_status == None:
+        st.warning('Please enter your username and password')
+        st.stop()
+    
+    # If authenticated, get the user's API key
+    user_api_key = credentials['usernames'][username]['api_key']
+    
+except Exception as e:
+    st.error(f"Authentication setup error: {e}")
+    st.info("Running without authentication (development mode)")
+    user_api_key = None
 
 # Layout Configuration
 st.set_page_config(page_title="Viral UGC Discovery", page_icon="🚀", layout="wide")
@@ -42,28 +83,13 @@ if 'active_min_viral' not in st.session_state:
 
 # Sidebar Filters
 with st.sidebar:
-    st.header("🔑 API Configuration")
+    # Show logged in user
+    st.success(f"👤 Logged in as: **{name}**")
+    authenticator.logout('Logout', 'sidebar')
     
-    # Try to load from secrets
-    secrets_key = None
-    try:
-        secrets_key = st.secrets["general"]["rapidapi_key"]
-        # Sanitize key (remove whitespace/newlines)
-        if secrets_key:
-            secrets_key = secrets_key.strip()
-        st.success("API Key loaded from secrets ✨")
-    except (FileNotFoundError, KeyError):
-        pass
-
+    st.divider()
+    
     with st.form("search_form"):
-        # API Key Input (if not in secrets)
-        if not secrets_key:
-            api_key_input = st.text_input("RapidAPI Key (TikAPI)", type="password", help="Get key from rapidapi.com/tikwm-tikwm-default/api/tiktok-scraper7")
-            if api_key_input:
-                api_key_input = api_key_input.strip()
-        else:
-            api_key_input = secrets_key
-        
         st.header("🔍 Filters")
         
         # Default to previous value if exists, else default
@@ -94,8 +120,8 @@ with st.sidebar:
 
     st.success(f"✅ Filter: Score > {st.session_state.active_min_viral} | Limit: {st.session_state.active_limit}")
 
-# Determine which key to use for fetching
-final_api_key = secrets_key if secrets_key else api_key_input
+# Use authenticated user's API key
+final_api_key = user_api_key
 
 # Title & Description (Dynamic)
 st.title("🚀 Viral Organic UGC Database (Prototype)")
