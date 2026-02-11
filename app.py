@@ -195,12 +195,16 @@ else:
 col4.metric("4. Viral Gems", len(filtered_df), f"Max: {top_score}x")
 
 if len(df) == 0:
-    st.error("⚠️ **No videos found!**")
+    st.error(f"⚠️ **No videos found!**")
+    
+    if status_msg != "No Data" and status_msg != "Success":
+        st.error(f"**Detailed Error:** {status_msg}")
+    
     st.markdown("""
     Possible reasons:
     1. **API Key Limit**: You might have used all your free requests.
     2. **Hashtag**: Try a more popular hashtag (e.g. `#funny`, `#dogs`).
-    3. **Sort Mode**: Try changing 'Sort By' to **Relevance**.
+    3. **Cloud IP Block**: The API might be blocking Streamlit Server.
     """)
 
 st.divider()

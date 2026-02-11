@@ -32,20 +32,28 @@ class RealDataFetcher(DataFetcher):
             "x-rapidapi-host": self.host
         }
 
-        try:
-            response = requests.get(self.url, headers=headers, params=querystring)
-            response.raise_for_status()
-            json_data = response.json()
+        # No try/except here - we want app.py to catch specific errors
+        response = requests.get(self.url, headers=headers, params=querystring)
+        
+        if response.status_code != 200:
+            raise Exception(f"API returned status code {response.status_code}: {response.text}")
             
-            # Check if 'data' and 'videos' exist
-            if "data" not in json_data or "videos" not in json_data["data"]:
-                print(f"API Response Warning: {json_data}")
-                return pd.DataFrame()
+        json_data = response.json()
+        
+        # Check if 'data' and 'videos' exist
+        if "data" not in json_data:
+             # Specialized error for quota or message
+             msg = json_data.get("message", str(json_data))
+             raise Exception(f"API Error (No Data field): {msg}")
+             
+        if "videos" not in json_data["data"]:
+             # This might just mean no results for this hashtag
+             return pd.DataFrame()
 
-            videos = json_data["data"]["videos"]
-            print(f"DEBUG: API returned {len(videos)} videos.")
-            
-            parsed_data = []
+        videos = json_data["data"]["videos"]
+        print(f"DEBUG: API returned {len(videos)} videos.")
+        
+        parsed_data = []
             filtered_count = 0
 
             for video in videos:
@@ -100,9 +108,8 @@ class RealDataFetcher(DataFetcher):
             print(f"DEBUG: Processed {len(parsed_data)} videos. Filtered out {filtered_count} old videos.")
             return pd.DataFrame(parsed_data)
 
-        except Exception as e:
-            print(f"Error fetching data: {e}")
-            return pd.DataFrame()
+        print(f"DEBUG: Processed {len(parsed_data)} videos.")
+        return pd.DataFrame(parsed_data)
 
     def _fetch_user_followers(self, unique_id: str) -> int:
         """
