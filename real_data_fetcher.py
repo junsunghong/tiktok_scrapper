@@ -66,14 +66,12 @@ class RealDataFetcher(DataFetcher):
                 score = calculate_viral_score(views, followers)
                 label = classify_virality(score)
                 
-                # Date Filtering (Last 90 Days)
+                # Date Logic
                 create_time = video.get("create_time", 0)
                 post_date = datetime.fromtimestamp(create_time)
                 days_old = (datetime.now() - post_date).days
                 
-                if days_old > 90:
-                    filtered_count += 1
-                    continue # Skip old content
+                # We do NOT filter here anymore, so the App can show "Too Old" stats.
 
                 # ... (thumbnail logic) ...
                 raw_thumbnail = video.get("ai_dynamic_cover") or video.get("origin_cover") or video.get("cover")

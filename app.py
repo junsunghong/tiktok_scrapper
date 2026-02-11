@@ -63,18 +63,20 @@ with st.sidebar:
         
         # Default to previous value if exists, else default
         default_hashtag = st.session_state.active_hashtag if st.session_state.active_hashtag else "#SaaS"
-        default_score = st.session_state.active_min_viral
         
         hashtag_input = st.text_input("Niche / Hashtag", value=default_hashtag, help="Enter any hashtag (e.g. #AI, #Marketing, #Crypto)")
         if not hashtag_input.startswith("#"):
             hashtag_input = f"#{hashtag_input}"
             
-        viral_score_input = st.slider("Min Viral Score", 0.0, 50.0, float(default_score), step=0.1)
+        # Simplified Inputs (Selectbox)
+        viral_score_input = st.selectbox("Min Viral Score", [1, 3, 5], index=0)
         
         # New Options
         sort_map = {"Relevance (Default)": 0, "Likes (Popular)": 1, "Date (Newest)": 2}
         sort_label = st.selectbox("Sort By", list(sort_map.keys()), index=0)
-        search_limit = st.slider("Max Videos to Scan", 10, 100, 30, step=10, help="Higher limit = More API quota used.")
+        
+        # Simplified Limit (Selectbox)
+        search_limit = st.selectbox("Max Videos to Scan", [30, 50, 100], index=0)
 
         # Search Button
         search_submitted = st.form_submit_button("Search 🔎")
@@ -92,7 +94,7 @@ with st.sidebar:
     if 'active_limit' not in st.session_state:
         st.session_state.active_limit = 30
 
-    st.success(f"✅ Active Filter: Score > {st.session_state.active_min_viral} | Limit: {st.session_state.active_limit}")
+    st.success(f"✅ Filter: Score > {st.session_state.active_min_viral} | Limit: {st.session_state.active_limit}")
 
 # Determine which key to use for fetching
 final_api_key = secrets_key if secrets_key else api_key_input
@@ -150,23 +152,48 @@ with st.expander("Debug: Raw Data Inspection"):
 # Display Data Source Status
 st.caption(f"Data Source: **{source_label}**")
 
-# Filtering Logic
+# --- Filtering Logic (App Side) ---
+filtered_df = pd.DataFrame()
+too_old_count = 0
+low_score_count = 0
+
 if not df.empty and 'viral_score' in df.columns:
-    filtered_df = df[df['viral_score'] >= st.session_state.active_min_viral].sort_values(by='viral_score', ascending=False)
-else:
-    filtered_df = pd.DataFrame()
+    # 1. Date Filter (90 days)
+    # We need to parse date if it's string, but fetcher returns string in 'date' col.
+    # Actually fetcher doesn't return date obj, it returns str.
+    # Let's rely on 'days_old' logic? Fetcher code modification didn't add 'days_old' column.
+    # I should have added 'days_old' to the DF in the previous step. 
+    # Wait, I didn't add it. I need to calculate it here or assume 'date' is usable.
+    # 'date' is YYYY-MM-DD.
+    from datetime import datetime
+    
+    # Add days_old column for debug/filtering
+    df['post_date_obj'] = pd.to_datetime(df['date'])
+    df['days_old'] = (datetime.now() - df['post_date_obj']).dt.days
+    
+    # Filter: Too Old (> 90 days)
+    recent_df = df[df['days_old'] <= 90]
+    too_old_count = len(df) - len(recent_df)
+    
+    # Filter: Low Score
+    if not recent_df.empty:
+        filtered_df = recent_df[recent_df['viral_score'] >= st.session_state.active_min_viral].sort_values(by='viral_score', ascending=False)
+        low_score_count = len(recent_df) - len(filtered_df)
+    else:
+        filtered_df = pd.DataFrame()
 
 # Display Stats
-col1, col2, col3 = st.columns(3)
-col1.metric("Total Posts Scanned", len(df))
-col2.metric("Viral Hidden Gems Found", len(filtered_df))
+col1, col2, col3, col4 = st.columns(4)
+col1.metric("1. Scanned", len(df))
+col2.metric("2. Too Old (>90d)", f"-{too_old_count}", help="Videos older than 90 days are hidden.")
+col3.metric("3. Low Score", f"-{low_score_count}", help=f"Videos with Viral Score < {st.session_state.active_min_viral} are hidden.")
+
 
 if not filtered_df.empty:
     top_score = filtered_df['viral_score'].max()
 else:
     top_score = 0
-
-col3.metric("Top Viral Score", f"{top_score}x")
+col4.metric("4. Viral Gems", len(filtered_df), f"Max: {top_score}x")
 
 st.divider()
 
