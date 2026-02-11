@@ -109,7 +109,13 @@ else:
 col1, col2, col3 = st.columns(3)
 col1.metric("Total Posts Scanned", len(df))
 col2.metric("Viral Hidden Gems Found", len(filtered_df))
-col3.metric("Top Viral Score", f"{filtered_df['viral_score'].max()}x")
+
+if not filtered_df.empty:
+    top_score = filtered_df['viral_score'].max()
+else:
+    top_score = 0
+
+col3.metric("Top Viral Score", f"{top_score}x")
 
 st.divider()
 
