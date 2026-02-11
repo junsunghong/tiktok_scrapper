@@ -69,7 +69,7 @@ with st.sidebar:
         if not hashtag_input.startswith("#"):
             hashtag_input = f"#{hashtag_input}"
             
-        viral_score_input = st.slider("Minimum Viral Score (Views/Followers)", 0.0, 50.0, float(default_score))
+        viral_score_input = st.slider("Minimum Viral Score (Views/Followers)", 0.0, 50.0, float(default_score), step=0.1)
         
         # Search Button
         search_submitted = st.form_submit_button("Search 🔎")
@@ -77,12 +77,9 @@ with st.sidebar:
         if search_submitted:
             st.session_state.active_hashtag = hashtag_input
             st.session_state.active_min_viral = viral_score_input
-            # If manual input is used, we might need to store it too, 
-            # but usually we just pass it to load_data immediately if structure allows.
-            # Here we just use the variable in the main flow? 
-            # No, main flow runs outside form. We need session state.
+            st.rerun()
 
-    st.info(f"Showing posts with > {st.session_state.active_min_viral}x more views than followers.")
+    st.success(f"✅ Active Filter: Score > {st.session_state.active_min_viral}")
 
 # Determine which key to use for fetching
 final_api_key = secrets_key if secrets_key else api_key_input
