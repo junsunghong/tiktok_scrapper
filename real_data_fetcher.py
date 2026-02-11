@@ -42,25 +42,22 @@ class RealDataFetcher(DataFetcher):
                 return pd.DataFrame()
 
             videos = json_data["data"]["videos"]
-            if videos:
-                print(f"DEBUG: First video author: {videos[0].get('author')}")
-                print(f"DEBUG: First video create_time: {videos[0].get('create_time')}")
+            print(f"DEBUG: API returned {len(videos)} videos.")
             
             parsed_data = []
+            filtered_count = 0
 
             for video in videos:
-                # Extract Metrics
+                # ... (metrics extraction) ...
                 views = video.get("play_count", 0)
                 likes = video.get("digg_count", 0)
                 author = video.get("author", {})
                 
-                # Fetch real follower count (requires extra API call)
-                # To save quota/time, we could only doing this for high-view videos, 
-                # but for accuracy we do it for all.
+                # Fetch real follower count
                 try:
                     followers = self._fetch_user_followers(author.get("unique_id"))
                 except:
-                    followers = 1 # Fallback
+                    followers = 1
                 
                 if followers == 0:
                     followers = 1
@@ -74,14 +71,12 @@ class RealDataFetcher(DataFetcher):
                 days_old = (datetime.now() - post_date).days
                 
                 if days_old > 90:
+                    filtered_count += 1
                     continue # Skip old content
 
-                # Try animated cover first (often works better), then static covers
-                # We use wsrv.nl as a transparent proxy to bypass TikTok's hotlink protection (403 Forbidden)
+                # ... (thumbnail logic) ...
                 raw_thumbnail = video.get("ai_dynamic_cover") or video.get("origin_cover") or video.get("cover")
-                
                 if raw_thumbnail:
-                    # Encode URL for the proxy
                     from urllib.parse import quote
                     thumbnail = f"https://wsrv.nl/?url={quote(raw_thumbnail)}&w=300&h=500&fit=cover"
                 else:
@@ -103,6 +98,7 @@ class RealDataFetcher(DataFetcher):
                 }
                 parsed_data.append(post)
 
+            print(f"DEBUG: Processed {len(parsed_data)} videos. Filtered out {filtered_count} old videos.")
             return pd.DataFrame(parsed_data)
 
         except Exception as e:
