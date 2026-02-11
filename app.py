@@ -33,9 +33,6 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-# Title & Description
-st.title("🚀 Viral Organic UGC Database (Prototype)")
-st.markdown("Discover high-performing content in the **Software & SaaS** niche before it peaks.")
 
 # Sidebar Filters
 with st.sidebar:
@@ -56,6 +53,10 @@ with st.sidebar:
         selected_hashtag = f"#{selected_hashtag}"
     min_viral_score = st.slider("Minimum Viral Score (Views/Followers)", 0.0, 50.0, 5.0)
     st.info(f"Showing posts with > {min_viral_score}x more views than followers.")
+
+# Title & Description (Dynamic)
+st.title("🚀 Viral Organic UGC Database (Prototype)")
+st.markdown(f"Discover high-performing content in the **{selected_hashtag}** niche before it peaks.")
 
 # Data Fetching
 @st.cache_data(ttl=3600)
