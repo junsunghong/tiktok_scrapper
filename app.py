@@ -11,16 +11,11 @@ name = None
 authentication_status = None
 username = None
 user_api_key = None
+authenticator = None
 
 try:
-    credentials = {
-        'cookie': st.secrets['credentials']['cookie'].to_dict(),
-        'usernames': {}
-    }
-    
-    # Convert usernames section
-    for username_key, user_data in st.secrets['credentials']['usernames'].items():
-        credentials['usernames'][username_key] = user_data.to_dict()
+    # Build credentials dict from secrets
+    credentials = dict(st.secrets['credentials'])
     
     # Create authenticator
     authenticator = stauth.Authenticate(
@@ -30,8 +25,14 @@ try:
         int(st.secrets['credentials']['cookie']['expiry_days'])
     )
     
-    # Render login widget
-    name, authentication_status, username = authenticator.login(location='sidebar')
+    # Render login widget - v0.4 API returns None, stores in st.session_state
+    authenticator.login(location='sidebar')
+    
+    # Access authentication status from session state (v0.4 API)
+    if 'authentication_status' in st.session_state:
+        authentication_status = st.session_state['authentication_status']
+        name = st.session_state.get('name')
+        username = st.session_state.get('username')
     
     if authentication_status == False:
         st.error('Username/password is incorrect')
@@ -41,7 +42,8 @@ try:
         st.stop()
     
     # If authenticated, get the user's API key
-    user_api_key = credentials['usernames'][username]['api_key']
+    if authentication_status and username:
+        user_api_key = credentials['usernames'][username]['api_key']
     
 except (KeyError, Exception) as e:
     # Running without authentication (development mode or secrets not configured)
