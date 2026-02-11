@@ -200,14 +200,18 @@ if len(df) == 0:
     if status_msg != "No Data" and status_msg != "Success":
         if "subscribed" in status_msg or "403" in status_msg:
             st.error("🚨 **API Subscription Error**")
-            st.markdown("""
+            st.markdown(f"""
             Your API Key is valid, but you are not explicitly **subscribed** to this specific API provider.
+            
+            **Debug Info:**
+            - **Key Used:** `{final_api_key[:5]}...` (Check if this matches your RapidAPI dashboard)
             
             👉 **[Click here to Subscribe (Free Tier)](https://rapidapi.com/tikwm-tikwm-default/api/tiktok-scraper7/pricing)**
             
             1. Go to the link above.
             2. Click **Subscribe** (Basic/Free plan).
-            3. **Restart this app** after subscribing.
+            3. *If already subscribed,* check if you are using the correct **Application** key in RapidAPI.
+            4. **Restart this app** after verifying.
             """)
         else:
             st.error(f"**Detailed Error:** {status_msg}")
