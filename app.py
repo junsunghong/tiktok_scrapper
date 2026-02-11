@@ -34,31 +34,67 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 
+# Initialize Session State
+if 'active_hashtag' not in st.session_state:
+    st.session_state.active_hashtag = None
+if 'active_min_viral' not in st.session_state:
+    st.session_state.active_min_viral = 5.0
+
 # Sidebar Filters
 with st.sidebar:
     st.header("🔑 API Configuration")
     
     # Try to load from secrets
+    secrets_key = None
     try:
-        api_key = st.secrets["general"]["rapidapi_key"]
+        secrets_key = st.secrets["general"]["rapidapi_key"]
         st.success("API Key loaded from secrets ✨")
-    except FileNotFoundError:
-        api_key = st.text_input("RapidAPI Key (TikAPI)", type="password", help="Get key from rapidapi.com/tikwm-tikwm-default/api/tiktok-scraper7")
-    except KeyError:
-        api_key = st.text_input("RapidAPI Key (TikAPI)", type="password", help="Get key from rapidapi.com/tikwm-tikwm-default/api/tiktok-scraper7")
-    
-    st.header("🔍 Filters")
-    selected_hashtag = st.text_input("Niche / Hashtag", value="#SaaS", help="Enter any hashtag (e.g. #AI, #Marketing, #Crypto)")
-    if not selected_hashtag.startswith("#"):
-        selected_hashtag = f"#{selected_hashtag}"
-    min_viral_score = st.slider("Minimum Viral Score (Views/Followers)", 0.0, 50.0, 5.0)
-    st.info(f"Showing posts with > {min_viral_score}x more views than followers.")
+    except (FileNotFoundError, KeyError):
+        pass
+
+    with st.form("search_form"):
+        # API Key Input (if not in secrets)
+        if not secrets_key:
+            api_key_input = st.text_input("RapidAPI Key (TikAPI)", type="password", help="Get key from rapidapi.com/tikwm-tikwm-default/api/tiktok-scraper7")
+        else:
+            api_key_input = secrets_key
+        
+        st.header("🔍 Filters")
+        hashtag_input = st.text_input("Niche / Hashtag", value="#SaaS", help="Enter any hashtag (e.g. #AI, #Marketing, #Crypto)")
+        if not hashtag_input.startswith("#"):
+            hashtag_input = f"#{hashtag_input}"
+            
+        viral_score_input = st.slider("Minimum Viral Score (Views/Followers)", 0.0, 50.0, 5.0)
+        
+        # Search Button
+        search_submitted = st.form_submit_button("Search 🔎")
+        
+        if search_submitted:
+            st.session_state.active_hashtag = hashtag_input
+            st.session_state.active_min_viral = viral_score_input
+            # If manual input is used, we might need to store it too, 
+            # but usually we just pass it to load_data immediately if structure allows.
+            # Here we just use the variable in the main flow? 
+            # No, main flow runs outside form. We need session state.
+
+    st.info(f"Showing posts with > {st.session_state.active_min_viral}x more views than followers.")
+
+# Determine which key to use for fetching
+final_api_key = secrets_key if secrets_key else api_key_input
 
 # Title & Description (Dynamic)
 st.title("🚀 Viral Organic UGC Database (Prototype)")
-st.markdown(f"Discover high-performing content in the <span style='color: #00FF99; font-weight: bold;'>{selected_hashtag}</span> niche before it peaks.", unsafe_allow_html=True)
+if st.session_state.active_hashtag:
+    st.markdown(f"Discover high-performing content in the <span style='color: #00FF99; font-weight: bold;'>{st.session_state.active_hashtag}</span> niche before it peaks.", unsafe_allow_html=True)
+else:
+    st.markdown("Discover high-performing content in your niche before it peaks.")
 
-# Data Fetching
+# Main Execution Flow
+if not st.session_state.active_hashtag:
+    st.info("👈 Please enter a Hashtag and click **Search** in the sidebar to start!")
+    st.stop()
+
+# Data Fetching (Uses Session State Hashtag)
 @st.cache_data(ttl=3600)
 def load_data(hashtag, key):
     if key:
@@ -77,7 +113,7 @@ def load_data(hashtag, key):
     fetcher = MockDataFetcher()
     return fetcher.fetch_posts(hashtag, limit=30), "Mock Data", "Success"
 
-df, source_label, status_msg = load_data(selected_hashtag, api_key)
+df, source_label, status_msg = load_data(st.session_state.active_hashtag, final_api_key)
 
 if status_msg == "Success":
     if source_label == "Real API":
@@ -101,7 +137,7 @@ st.caption(f"Data Source: **{source_label}**")
 
 # Filtering Logic
 if not df.empty and 'viral_score' in df.columns:
-    filtered_df = df[df['viral_score'] >= min_viral_score].sort_values(by='viral_score', ascending=False)
+    filtered_df = df[df['viral_score'] >= st.session_state.active_min_viral].sort_values(by='viral_score', ascending=False)
 else:
     filtered_df = pd.DataFrame()
 
