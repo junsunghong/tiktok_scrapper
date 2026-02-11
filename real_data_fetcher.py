@@ -10,9 +10,10 @@ class RealDataFetcher(DataFetcher):
         self.url = "https://tiktok-scraper7.p.rapidapi.com/feed/search"
         self.host = "tiktok-scraper7.p.rapidapi.com"
 
-    def fetch_posts(self, hashtag: str, limit: int = 20) -> pd.DataFrame:
+    def fetch_posts(self, hashtag: str, limit: int = 20, sort_type: int = 0) -> pd.DataFrame:
         """
         Fetches real videos from TikTok via RapidAPI.
+        sort_type: 0=Relevance, 1=Likes, 2=Date
         """
         # Ensure hashtag has #
         if not hashtag.startswith("#"):
@@ -23,7 +24,7 @@ class RealDataFetcher(DataFetcher):
             "count": str(limit),
             "region": "us",
             "publish_time": "0", # Any time
-            "sort_type": "0" # Default sort (Relevance/General)
+            "sort_type": str(sort_type)
         }
 
         headers = {

@@ -69,17 +69,30 @@ with st.sidebar:
         if not hashtag_input.startswith("#"):
             hashtag_input = f"#{hashtag_input}"
             
-        viral_score_input = st.slider("Minimum Viral Score (Views/Followers)", 0.0, 50.0, float(default_score), step=0.1)
+        viral_score_input = st.slider("Min Viral Score", 0.0, 50.0, float(default_score), step=0.1)
         
+        # New Options
+        sort_map = {"Relevance (Default)": 0, "Likes (Popular)": 1, "Date (Newest)": 2}
+        sort_label = st.selectbox("Sort By", list(sort_map.keys()), index=0)
+        search_limit = st.slider("Max Videos to Scan", 10, 100, 30, step=10, help="Higher limit = More API quota used.")
+
         # Search Button
         search_submitted = st.form_submit_button("Search 🔎")
         
         if search_submitted:
             st.session_state.active_hashtag = hashtag_input
             st.session_state.active_min_viral = viral_score_input
+            st.session_state.active_sort = sort_map[sort_label]
+            st.session_state.active_limit = search_limit
             st.rerun()
 
-    st.success(f"✅ Active Filter: Score > {st.session_state.active_min_viral}")
+    # Initialize new session state defaults if they don't exist
+    if 'active_sort' not in st.session_state:
+        st.session_state.active_sort = 0
+    if 'active_limit' not in st.session_state:
+        st.session_state.active_limit = 30
+
+    st.success(f"✅ Active Filter: Score > {st.session_state.active_min_viral} | Limit: {st.session_state.active_limit}")
 
 # Determine which key to use for fetching
 final_api_key = secrets_key if secrets_key else api_key_input
@@ -98,12 +111,12 @@ if not st.session_state.active_hashtag:
 
 # Data Fetching (Uses Session State Hashtag)
 @st.cache_data(ttl=3600)
-def load_data(hashtag, key):
+def load_data(hashtag, key, limit, sort_type):
     if key:
         from real_data_fetcher import RealDataFetcher
         fetcher = RealDataFetcher(key)
         try:
-            data = fetcher.fetch_posts(hashtag, limit=30)
+            data = fetcher.fetch_posts(hashtag, limit=limit, sort_type=sort_type)
             if not data.empty:
                 return data, "Real API", "Success"
             else:
@@ -113,9 +126,9 @@ def load_data(hashtag, key):
             
     # Fallback or Mock
     fetcher = MockDataFetcher()
-    return fetcher.fetch_posts(hashtag, limit=30), "Mock Data", "Success"
+    return fetcher.fetch_posts(hashtag, limit=limit), "Mock Data", "Success"
 
-df, source_label, status_msg = load_data(st.session_state.active_hashtag, final_api_key)
+df, source_label, status_msg = load_data(st.session_state.active_hashtag, final_api_key, st.session_state.active_limit, st.session_state.active_sort)
 
 if status_msg == "Success":
     if source_label == "Real API":
