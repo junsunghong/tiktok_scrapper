@@ -185,8 +185,13 @@ if not df.empty and 'viral_score' in df.columns:
 # Display Stats
 col1, col2, col3, col4 = st.columns(4)
 col1.metric("1. Scanned", len(df))
-col2.metric("2. Too Old (>90d)", f"-{too_old_count}", help="Videos older than 90 days are hidden.")
-col3.metric("3. Low Score", f"-{low_score_count}", help=f"Videos with Viral Score < {st.session_state.active_min_viral} are hidden.")
+
+# Fix -0 formatting
+too_old_str = f"-{too_old_count}" if too_old_count > 0 else "0"
+low_score_str = f"-{low_score_count}" if low_score_count > 0 else "0"
+
+col2.metric("2. Too Old (>90d)", too_old_str, help="Videos older than 90 days are hidden.")
+col3.metric("3. Low Score", low_score_str, help=f"Videos with Viral Score < {st.session_state.active_min_viral} are hidden.")
 
 
 if not filtered_df.empty:
@@ -194,6 +199,15 @@ if not filtered_df.empty:
 else:
     top_score = 0
 col4.metric("4. Viral Gems", len(filtered_df), f"Max: {top_score}x")
+
+if len(df) == 0:
+    st.error("⚠️ **No videos found!**")
+    st.markdown("""
+    Possible reasons:
+    1. **API Key Limit**: You might have used all your free requests.
+    2. **Hashtag**: Try a more popular hashtag (e.g. `#funny`, `#dogs`).
+    3. **Sort Mode**: Try changing 'Sort By' to **Relevance**.
+    """)
 
 st.divider()
 
