@@ -56,7 +56,7 @@ with st.sidebar:
 
 # Title & Description (Dynamic)
 st.title("🚀 Viral Organic UGC Database (Prototype)")
-st.markdown(f"Discover high-performing content in the **{selected_hashtag}** niche before it peaks.")
+st.markdown(f"Discover high-performing content in the <span style='color: #00FF99; font-weight: bold;'>{selected_hashtag}</span> niche before it peaks.", unsafe_allow_html=True)
 
 # Data Fetching
 @st.cache_data(ttl=3600)
