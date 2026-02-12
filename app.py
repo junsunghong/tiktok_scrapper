@@ -104,9 +104,14 @@ st.markdown("""
     }
     
     /* Style selectbox choice text with mint color */
-    div[data-baseweb="select"] span {
+    div[data-baseweb="select"] * {
         color: #00FF99 !important;
         font-weight: 600 !important;
+    }
+    
+    /* Specifically target Streamlit selectbox value */
+    .stSelectbox div[data-baseweb="select"] div {
+        color: #00FF99 !important;
     }
     
     /* Style the input labels for better visibility */
