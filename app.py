@@ -224,9 +224,8 @@ with st.sidebar:
             else:
                 video_duration = 'any'
             
-            # Min Filters (Stacked for better layout)
-            min_views = st.number_input("Min Views", min_value=0, value=0, step=1000, help="Minimum view count")
-            min_subscribers = st.number_input("Min Subscribers", min_value=0, value=0, step=1000, help="Minimum channel subscribers")
+            # Min Filters (Fixed to 1000 as per request)
+            # min_views and min_subscribers inputs removed
             
             # Min Viral Score
             viral_score_input = st.selectbox("Min Viral Score", [1, 3, 5, 10], index=0)
@@ -243,8 +242,8 @@ with st.sidebar:
                 st.session_state.active_limit = target_results
                 st.session_state.youtube_order = 'date'  # Always sort by recent uploads
                 st.session_state.youtube_video_type = video_type
-                st.session_state.youtube_min_views = min_views
-                st.session_state.youtube_min_subscribers = min_subscribers
+                st.session_state.youtube_min_views = 1000
+                st.session_state.youtube_min_subscribers = 1000
                 # Reset search count flag
                 st.session_state.just_searched = True
                 st.rerun()
@@ -280,9 +279,9 @@ if not st.session_state.active_hashtag:
         st.info("### 📺 YouTube Discovery Guide")
         st.markdown("""
         1. **Keywords**: Enter a topic like `AI automation` or `cooking hacks`.
-        2. **Filters**: 
-            - Use **Min Views** to filter out low-reach videos.
-            - Use **Min Subscribers** to find small channels going viral.
+        2. **Fixed Protection**: 
+            - **Min Views**: 1,000+ (Auto-applied)
+            - **Min Subscribers**: 1,000+ (Auto-applied)
         3. **Target Results**: The app will auto-paginate until it finds the requested number of filtered videos.
         
         ⚠️ **Quota Note**: YouTube API has a daily limit (approx. 10,000 units). 
@@ -372,8 +371,8 @@ else:  # YouTube
         st.session_state.active_limit,
         st.session_state.get('youtube_order', 'date'),
         video_duration,
-        st.session_state.get('youtube_min_views', 0),
-        st.session_state.get('youtube_min_subscribers', 0),
+        1000, # Min Views Fixed
+        1000, # Min Subscribers Fixed
         None, # Always start from beginning
         v='v2' # Cache bust
     )
@@ -494,7 +493,10 @@ with st.expander("Debug: Raw Data Inspection"):
 
 
 # Display Data Source Status
-st.caption(f"Data Source: **{source_label}**")
+if platform == 'YouTube':
+    st.caption(f"Data Source: **{source_label}** (Fixed: 1k+ Views & 1k+ Subs)")
+else:
+    st.caption(f"Data Source: **{source_label}**")
 
 # --- Filtering Logic (App Side) ---
 filtered_df = pd.DataFrame()
