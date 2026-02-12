@@ -409,6 +409,7 @@ st.caption(f"Data Source: **{source_label}**")
 
 # --- Filtering Logic (App Side) ---
 filtered_df = pd.DataFrame()
+low_score_df = pd.DataFrame()
 too_old_count = 0
 low_score_count = 0
 
@@ -428,12 +429,15 @@ if not df.empty and 'viral_score' in df.columns:
         # Filter: Low Score
         if not recent_df.empty:
             filtered_df = recent_df[recent_df['viral_score'] >= st.session_state.active_min_viral].sort_values(by='viral_score', ascending=False)
-            low_score_count = len(recent_df) - len(filtered_df)
+            low_score_df = recent_df[recent_df['viral_score'] < st.session_state.active_min_viral].sort_values(by='viral_score', ascending=False)
+            low_score_count = len(low_score_df)
         else:
             filtered_df = pd.DataFrame()
+            low_score_df = pd.DataFrame()
     else:  # YouTube - no date filter, just viral score
         filtered_df = df[df['viral_score'] >= st.session_state.active_min_viral].sort_values(by='viral_score', ascending=False)
-        low_score_count = len(df) - len(filtered_df)
+        low_score_df = df[df['viral_score'] < st.session_state.active_min_viral].sort_values(by='viral_score', ascending=False)
+        low_score_count = len(low_score_df)
 
 # Display Stats
 col1, col2, col3, col4 = st.columns(4)
@@ -469,38 +473,69 @@ if len(df) == 0:
 st.divider()
 
 # Gallery View
-if len(filtered_df) == 0:
+if filtered_df.empty and low_score_df.empty:
     st.warning("No viral posts found with this filter. Try lowering the Viral Score.")
 else:
-    cols = st.columns(3) # Grid Layout
-    for index, (i, row) in enumerate(filtered_df.iterrows()):
-        with cols[index % 3]:
-            # Simulate a Card UI
-            # Clickable Image Card using Markdown
-            # Use wsrv.nl proxy via real_data_fetcher or fallback
-            thumbnail = row.get('thumbnail_url', "https://picsum.photos/400/600")
-            link = row.get('video_url', "#")
-            
-            st.markdown(f"""
-            <a href="{link}" target="_blank">
-                <img src="{thumbnail}" style="width:100%; border-radius:10px; margin-bottom:10px;">
-            </a>
-            """, unsafe_allow_html=True)
-            
-            st.subheader(f"{row['virality_label']}")
-            st.write(f"**[{row['title']}]({link})**")
-            
-            # Metrics
-            st.write(f"👁️ **{row['views']:,}** Views")
-            
-            # Platform-specific label
-            if st.session_state.platform == 'YouTube':
-                st.write(f"👤 **{row['followers']:,}** Subscribers")
-            else:
-                st.write(f"👤 **{row['followers']:,}** Followers")
-            
-            st.write(f"🔥 **Score: {row['viral_score']}x**")
-            
-            with st.expander("Analysis"):
-                st.write(f"This post has **{row['viral_score']}x** more views than the author has followers, indicating high organic reach.")
+    # 1. Viral Gems Section
+    if not filtered_df.empty:
+        st.markdown(f"### <span style='color: #00FF99;'>💎 Viral Gems</span> ({len(filtered_df)})", unsafe_allow_html=True)
+        cols = st.columns(3) # Grid Layout
+        for index, (i, row) in enumerate(filtered_df.iterrows()):
+            with cols[index % 3]:
+                # Card UI Logic
+                thumbnail = row.get('thumbnail_url', "https://picsum.photos/400/600")
+                link = row.get('video_url', "#")
+                
+                st.markdown(f"""
+                <a href="{link}" target="_blank">
+                    <img src="{thumbnail}" style="width:100%; border-radius:10px; margin-bottom:10px;">
+                </a>
+                """, unsafe_allow_html=True)
+                
+                st.subheader(f"{row['virality_label']}")
+                st.write(f"**[{row['title']}]({link})**")
+                
+                # Metrics
+                st.write(f"👁️ **{row['views']:,}** Views")
+                
+                # Platform-specific label
+                if st.session_state.platform == 'YouTube':
+                    st.write(f"👤 **{row['followers']:,}** Subscribers")
+                else:
+                    st.write(f"👤 **{row['followers']:,}** Followers")
+                
+                st.write(f"🔥 **Score: {row['viral_score']}x**")
+                
+                with st.expander("Analysis"):
+                    st.write(f"This post has **{row['viral_score']}x** more views than the author has followers, indicating high organic reach.")
+
+    # 2. Low Score Section
+    if not low_score_df.empty:
+        st.divider()
+        st.markdown(f"### 📊 Scanned Results (Score < {st.session_state.active_min_viral}x)", unsafe_allow_html=True)
+        cols = st.columns(3) # Grid Layout
+        for index, (i, row) in enumerate(low_score_df.iterrows()):
+            with cols[index % 3]:
+                # Card UI Logic (identical but maybe less prominent)
+                thumbnail = row.get('thumbnail_url', "https://picsum.photos/400/600")
+                link = row.get('video_url', "#")
+                
+                st.markdown(f"""
+                <a href="{link}" target="_blank">
+                    <img src="{thumbnail}" style="width:100%; border-radius:10px; margin-bottom:10px; opacity: 0.8;">
+                </a>
+                """, unsafe_allow_html=True)
+                
+                st.write(f"**[{row['title']}]({link})**")
+                
+                # Metrics
+                st.write(f"👁️ **{row['views']:,}** Views")
+                
+                # Platform-specific label
+                if st.session_state.platform == 'YouTube':
+                    st.write(f"👤 **{row['followers']:,}** Subscribers")
+                else:
+                    st.write(f"👤 **{row['followers']:,}** Followers")
+                
+                st.write(f"📊 **Score: {row['viral_score']}x**")
 
