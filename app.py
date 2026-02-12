@@ -199,11 +199,18 @@ with st.sidebar:
             else:
                 video_duration = 'any'
             
+            # Min Filters
+            col1, col2 = st.columns(2)
+            with col1:
+                min_views = st.number_input("Min Views", min_value=0, value=0, step=1000, help="Minimum view count")
+            with col2:
+                min_subscribers = st.number_input("Min Subscribers", min_value=0, value=0, step=1000, help="Minimum channel subscribers")
+            
             # Min Viral Score
             viral_score_input = st.selectbox("Min Viral Score", [1, 3, 5, 10], index=0)
             
-            # Max Results
-            max_results = st.selectbox("Results per Page", [10, 25, 50], index=1)
+            # Target Results
+            target_results = st.selectbox("Target Results", [10, 25, 50], index=1, help="Number of filtered videos you want to see")
             
             # Search Button
             search_submitted = st.form_submit_button("Search 🔎")
@@ -211,9 +218,11 @@ with st.sidebar:
             if search_submitted:
                 st.session_state.active_hashtag = query_input
                 st.session_state.active_min_viral = viral_score_input
-                st.session_state.active_limit = max_results
+                st.session_state.active_limit = target_results
                 st.session_state.youtube_order = 'date'  # Always sort by recent uploads
                 st.session_state.youtube_video_type = video_type
+                st.session_state.youtube_min_views = min_views
+                st.session_state.youtube_min_subscribers = min_subscribers
                 st.session_state.youtube_page_token = None  # Reset pagination
                 st.session_state.youtube_prev_token = None
                 st.rerun()
