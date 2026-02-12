@@ -386,7 +386,23 @@ if st.session_state.platform == 'YouTube':
     limit = 10000
     progress = min(used / limit, 1.0)
     
-    st.write(f"📊 **YouTube API Usage (Daily Quota):** `{used:,} / {limit:,}` units")
+    # Calculate Time until Reset (Midnight PT)
+    from datetime import datetime, timedelta
+    pt_now = datetime.utcnow() - timedelta(hours=8)
+    pt_midnight = (pt_now + timedelta(days=1)).replace(hour=0, minute=0, second=0, microsecond=0)
+    remaining = pt_midnight - pt_now
+    
+    # Format remaining time: HH:MM:SS
+    hours, remainder = divmod(remaining.seconds, 3600)
+    minutes, seconds = divmod(remainder, 60)
+    countdown_str = f"{hours:02d}h {minutes:02d}m {seconds:02d}s"
+    
+    col_q1, col_q2 = st.columns([2, 1])
+    with col_q1:
+        st.write(f"📊 **YouTube API Usage:** `{used:,} / {limit:,}` units")
+    with col_q2:
+        st.write(f"⏳ **Reset in:** `{countdown_str}`")
+    
     if used > 8000:
         st.progress(progress)
         st.warning("⚠️ Approaching daily quota limit (10,000 units).")
