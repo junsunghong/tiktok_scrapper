@@ -5,6 +5,7 @@ import streamlit_authenticator as stauth
 import yaml
 from yaml.loader import SafeLoader
 import calendar
+import random
 
 # Authentication must come FIRST before any st. commands
 # Load credentials from secrets
@@ -400,28 +401,39 @@ if st.session_state.platform == 'YouTube':
     
     # Use calendar.timegm for reliable UTC epoch conversion
     target_timestamp_ms = int(calendar.timegm(target_utc.utctimetuple()) * 1000)
+    
+    # Create a unique ID for this render to prevent script conflicts
+    timer_id = f"quota-timer-{random.randint(1000, 9999)}"
+    
+    # Python-side fallback pre-calculation
+    remaining = target_utc - now_utc
+    hours, remainder = divmod(remaining.seconds, 3600)
+    minutes, seconds = divmod(remainder, 60)
+    fallback_str = f"{hours:02d}h {minutes:02d}m {seconds:02d}s"
 
     col_q1, col_q2 = st.columns([2, 1])
     with col_q1:
         st.write(f"📊 **YouTube API Usage:** `{used:,} / {limit:,}` units")
     with col_q2:
-        # Real-time countdown using JavaScript with a more robust script
+        # Real-time countdown using JavaScript with a unique ID and fallback
         st.markdown(f"""
             <div style="font-size: 14px; color: #FAFAFA;">
-                ⏳ <b>Reset in:</b> <span id="quota-timer">Calculating...</span>
+                ⏳ <b>Reset in:</b> <span id="{timer_id}">{fallback_str}</span>
             </div>
             <script>
                 (function() {{
                     const targetTime = {target_timestamp_ms};
-                    const timerElement = document.getElementById('quota-timer');
+                    const targetId = "{timer_id}";
                     
                     function updateTimer() {{
+                        const timerElement = document.getElementById(targetId);
+                        if (!timerElement) return;
+                        
                         const now = new Date().getTime();
                         const distance = targetTime - now;
                         
                         if (distance <= 0) {{
                             timerElement.innerHTML = "RESETTING...";
-                            // Suggest reload if reset reached
                             return;
                         }}
                         
@@ -429,7 +441,6 @@ if st.session_state.platform == 'YouTube':
                         const minutes = Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60));
                         const seconds = Math.floor((distance % (1000 * 60)) / 1000);
                         
-                        // Using template literals for padding
                         const h = String(hours).padStart(2, '0');
                         const m = String(minutes).padStart(2, '0');
                         const s = String(seconds).padStart(2, '0');
@@ -437,12 +448,12 @@ if st.session_state.platform == 'YouTube':
                         timerElement.innerHTML = h + "h " + m + "m " + s + "s";
                     }}
                     
-                    // Clear any existing interval to prevent duplicates on rerender
-                    if (window.quotaInterval) {{
-                        clearInterval(window.quotaInterval);
-                    }}
-                    window.quotaInterval = setInterval(updateTimer, 1000);
-                    updateTimer();
+                    // Run immediately and then every second
+                    setTimeout(updateTimer, 50); // Slight delay to ensure DOM is ready
+                    const interval = setInterval(updateTimer, 1000);
+                    
+                    // Cleanup interval if the element is removed (standard practice)
+                    // In Streamlit, the entire script block usually gets replaced.
                 }})();
             </script>
         """, unsafe_allow_html=True)
