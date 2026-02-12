@@ -314,7 +314,7 @@ def load_tiktok_data(hashtag, key, limit):
 
 
 @st.cache_data(ttl=3600)
-def load_youtube_data(query, youtube_key, target_results, order, video_duration, min_views, min_subscribers, page_token):
+def load_youtube_data(query, youtube_key, target_results, order, video_duration, min_views, min_subscribers, page_token, v='v2'):
     """Load YouTube data with auto-pagination to meet target filtered results"""
     if not youtube_key:
         return pd.DataFrame(), None, None, 0, "YouTube API", "No API Key"
@@ -373,7 +373,8 @@ else:  # YouTube
         video_duration,
         st.session_state.get('youtube_min_views', 0),
         st.session_state.get('youtube_min_subscribers', 0),
-        None # Always start from beginning
+        None, # Always start from beginning
+        v='v2' # Cache bust
     )
     
     # Update quota units based on actual cost returned (if not from cache)
@@ -453,7 +454,9 @@ if st.session_state.platform == 'YouTube':
         st.progress(progress)
     
     if st.session_state.get('just_searched'):
-        st.toast(f"🚀 Quota updated: {used:,} units used", icon="📈")
+        # Show breakdown to explain units (100 per search call + detail calls)
+        pages = (units_used // 100) if units_used >= 100 else 1
+        st.toast(f"🚀 Quota updated: +{units_used} units ({pages} pages searched)", icon="📈")
         st.session_state.just_searched = False
     
     st.divider()
@@ -579,7 +582,7 @@ else:
                 # Channel Info
                 if st.session_state.platform == 'YouTube' and 'channel_id' in row:
                     channel_url = f"https://www.youtube.com/channel/{row['channel_id']}"
-                    st.markdown(f"👤 <a href='{channel_url}' target='_blank' style='color: #00FF99; text-decoration: none; font-weight: bold;'>{row['author']}</a>", unsafe_allow_html=True)
+                    st.markdown(f"👤 <a href='{channel_url}' target='_blank' style='color: #00FF99 !important; text-decoration: none !important; font-weight: bold;'>{row['author']}</a>", unsafe_allow_html=True)
                 else:
                     st.write(f"👤 **{row['author']}**")
                 
@@ -620,7 +623,7 @@ else:
                 # Channel Info
                 if st.session_state.platform == 'YouTube' and 'channel_id' in row:
                     channel_url = f"https://www.youtube.com/channel/{row['channel_id']}"
-                    st.markdown(f"👤 <a href='{channel_url}' target='_blank' style='color: #00FF99; text-decoration: none; font-weight: bold;'>{row['author']}</a>", unsafe_allow_html=True)
+                    st.markdown(f"👤 <a href='{channel_url}' target='_blank' style='color: #00FF99 !important; text-decoration: none !important; font-weight: bold;'>{row['author']}</a>", unsafe_allow_html=True)
                 else:
                     st.write(f"👤 **{row['author']}**")
                 
