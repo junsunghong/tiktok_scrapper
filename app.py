@@ -415,48 +415,44 @@ if st.session_state.platform == 'YouTube':
     with col_q1:
         st.write(f"📊 **YouTube API Usage:** `{used:,} / {limit:,}` units")
     with col_q2:
-        # Real-time countdown using JavaScript with a unique ID and fallback
-        st.markdown(f"""
-            <div style="font-size: 14px; color: #FAFAFA;">
-                ⏳ <b>Reset in:</b> <span id="{timer_id}">{fallback_str}</span>
+        # Real-time countdown using st.components.v1.html for reliable JS execution
+        import streamlit.components.v1 as components
+        components.html(f"""
+            <div style="font-family: sans-serif; font-size: 14px; color: #FAFAFA; display: flex; align-items: center; justify-content: flex-end; height: 100%;">
+                <span style="margin-right: 5px;">⏳ <b>Reset in:</b></span>
+                <span id="timer" style="font-family: monospace; min-width: 80px;">{fallback_str}</span>
             </div>
             <script>
-                (function() {{
-                    const targetTime = {target_timestamp_ms};
-                    const targetId = "{timer_id}";
+                const targetTime = {target_timestamp_ms};
+                const timerElement = document.getElementById('timer');
+                
+                function updateTimer() {{
+                    const now = new Date().getTime();
+                    const distance = targetTime - now;
                     
-                    function updateTimer() {{
-                        const timerElement = document.getElementById(targetId);
-                        if (!timerElement) return;
-                        
-                        const now = new Date().getTime();
-                        const distance = targetTime - now;
-                        
-                        if (distance <= 0) {{
-                            timerElement.innerHTML = "RESETTING...";
-                            return;
-                        }}
-                        
-                        const hours = Math.floor(distance / (1000 * 60 * 60));
-                        const minutes = Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60));
-                        const seconds = Math.floor((distance % (1000 * 60)) / 1000);
-                        
-                        const h = String(hours).padStart(2, '0');
-                        const m = String(minutes).padStart(2, '0');
-                        const s = String(seconds).padStart(2, '0');
-                        
-                        timerElement.innerHTML = h + "h " + m + "m " + s + "s";
+                    if (distance <= 0) {{
+                        timerElement.innerHTML = "RESETTING...";
+                        return;
                     }}
                     
-                    // Run immediately and then every second
-                    setTimeout(updateTimer, 50); // Slight delay to ensure DOM is ready
-                    const interval = setInterval(updateTimer, 1000);
+                    const hours = Math.floor(distance / (1000 * 60 * 60));
+                    const minutes = Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60));
+                    const seconds = Math.floor((distance % (1000 * 60)) / 1000);
                     
-                    // Cleanup interval if the element is removed (standard practice)
-                    // In Streamlit, the entire script block usually gets replaced.
-                }})();
+                    const h = String(hours).padStart(2, '0');
+                    const m = String(minutes).padStart(2, '0');
+                    const s = String(seconds).padStart(2, '0');
+                    
+                    timerElement.innerHTML = h + "h " + m + "m " + s + "s";
+                }}
+                
+                setInterval(updateTimer, 1000);
+                updateTimer();
             </script>
-        """, unsafe_allow_html=True)
+            <style>
+                body {{ margin: 0; padding: 0; background-color: transparent; overflow: hidden; }}
+            </style>
+        """, height=24)
     
     if used > 8000:
         st.progress(progress)
