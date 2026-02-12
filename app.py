@@ -14,8 +14,24 @@ user_api_key = None
 authenticator = None
 
 try:
-    # Build credentials dict from secrets
-    credentials = dict(st.secrets['credentials'])
+    # Build credentials dict from secrets - must manually convert since secrets is immutable
+    credentials = {
+        'cookie': {
+            'name': st.secrets['credentials']['cookie']['name'],
+            'key': st.secrets['credentials']['cookie']['key'],
+            'expiry_days': st.secrets['credentials']['cookie']['expiry_days']
+        },
+        'usernames': {}
+    }
+    
+    # Convert usernames
+    for username_key in st.secrets['credentials']['usernames']:
+        user_data = st.secrets['credentials']['usernames'][username_key]
+        credentials['usernames'][username_key] = {
+            'name': user_data['name'],
+            'password': user_data['password'],
+            'api_key': user_data['api_key']
+        }
     
     # Create authenticator
     authenticator = stauth.Authenticate(
