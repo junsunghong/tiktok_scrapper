@@ -139,7 +139,7 @@ if 'youtube_order' not in st.session_state:
 if 'youtube_video_type' not in st.session_state:
     st.session_state.youtube_video_type = 'any'
 if 'youtube_search_count' not in st.session_state:
-    st.session_state.youtube_search_count = 50
+    st.session_state.youtube_search_count = 0
 
 # Sidebar Filters
 with st.sidebar:
@@ -244,6 +244,7 @@ with st.sidebar:
                 
                 # Increment quota counter
                 st.session_state.youtube_search_count += 1
+                st.session_state.just_searched = True
                 st.rerun()
     
     # Initialize new session state defaults if they don't exist
@@ -382,7 +383,15 @@ else:  # YouTube
 # YouTube Pagination & Quota Display
 if st.session_state.platform == 'YouTube':
     # Display Quota Tracker at the top of results
-    st.warning(f"📊 **YouTube API Usage Tracking (Today):** `{st.session_state.youtube_search_count}` units consumed")
+    count = st.session_state.youtube_search_count
+    progress = min(count / 50.0, 1.0)
+    
+    st.write(f"📊 **YouTube API Usage Tracking (Today):** `{count}/50` searches")
+    st.progress(progress)
+    
+    if st.session_state.get('just_searched'):
+        st.toast(f"🚀 Search count updated: {count}/50", icon="📈")
+        st.session_state.just_searched = False
     
     col1, col2, col3 = st.columns([1, 3, 1])
     
