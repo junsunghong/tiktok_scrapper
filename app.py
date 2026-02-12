@@ -229,6 +229,8 @@ with st.sidebar:
                 st.session_state.active_limit = target_results
                 st.session_state.youtube_order = 'date'  # Always sort by recent uploads
                 st.session_state.youtube_video_type = video_type
+                st.session_state.youtube_min_views = min_views
+                st.session_state.youtube_min_subscribers = min_subscribers
                 # Reset search count flag
                 st.session_state.youtube_search_count += 1
                 st.session_state.just_searched = True
