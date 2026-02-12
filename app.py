@@ -189,8 +189,12 @@ with st.sidebar:
                 hashtag_input = f"#{hashtag_input}"
                 
             # Simplified Inputs (Selectbox)
-            viral_score_input = st.selectbox("Min Viral Score", [1, 3, 5], index=0)
-            st.caption("(views / followers)")
+            viral_score_input = st.selectbox(
+                "Min Viral Score", 
+                [1, 3, 5], 
+                index=0, 
+                help="viral score = views / followers"
+            )
             
             # Simplified Limit (Selectbox)
             search_limit = st.selectbox("Max Videos to Scan", [30, 50, 100], index=0)
@@ -229,8 +233,12 @@ with st.sidebar:
             # min_views and min_subscribers inputs removed
             
             # Min Viral Score
-            viral_score_input = st.selectbox("Min Viral Score", [1, 3, 5, 10], index=0)
-            st.caption("(views / subscribers)")
+            viral_score_input = st.selectbox(
+                "Min Viral Score", 
+                [1, 3, 5, 10], 
+                index=0, 
+                help="viral score = views / subscribers"
+            )
             
             # Target Results
             target_results = st.selectbox("Target Results", [10, 25, 50], index=1, help="Number of filtered videos you want to see")
