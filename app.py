@@ -399,8 +399,8 @@ else:  # YouTube
         st.session_state.active_limit,
         st.session_state.get('youtube_order', 'date'),
         video_duration,
-        100, # Min Views Relaxed (Was 1000)
-        100, # Min Subscribers Relaxed (Was 1000)
+        1000, # Min Views Fixed
+        1000, # Min Subscribers Fixed
         None, # Always start from beginning
         v='v3' # Cache bust
     )
@@ -541,9 +541,9 @@ if not df.empty and 'viral_score' in df.columns:
         df['post_date_obj'] = pd.to_datetime(df['date'])
         df['days_old'] = (datetime.now() - df['post_date_obj']).dt.days
         
-        # Filter: Too Old (Removed for now to debug missing results)
-        recent_df = df # df[df['days_old'] <= 90]
-        too_old_count = 0 # len(df) - len(recent_df)
+        # Filter: Too Old (> 90 days)
+        recent_df = df[df['days_old'] <= 90]
+        too_old_count = len(df) - len(recent_df)
         
         # Filter: Low Score
         if not recent_df.empty:
