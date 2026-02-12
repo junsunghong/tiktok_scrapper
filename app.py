@@ -386,22 +386,57 @@ if st.session_state.platform == 'YouTube':
     limit = 10000
     progress = min(used / limit, 1.0)
     
-    # Calculate Time until Reset (Midnight PT)
-    from datetime import datetime, timedelta
-    pt_now = datetime.utcnow() - timedelta(hours=8)
-    pt_midnight = (pt_now + timedelta(days=1)).replace(hour=0, minute=0, second=0, microsecond=0)
-    remaining = pt_midnight - pt_now
+    # Calculate Target Time for Reset (Midnight PT = UTC 08:00)
+    from datetime import datetime, timedelta, time
+    import time as time_module
     
-    # Format remaining time: HH:MM:SS
-    hours, remainder = divmod(remaining.seconds, 3600)
-    minutes, seconds = divmod(remainder, 60)
-    countdown_str = f"{hours:02d}h {minutes:02d}m {seconds:02d}s"
+    now_utc = datetime.utcnow()
+    # Reset happens at 08:00:00 UTC every day
+    target_utc = now_utc.replace(hour=8, minute=0, second=0, microsecond=0)
+    if now_utc >= target_utc:
+        target_utc += timedelta(days=1)
     
+    target_timestamp_ms = int(time_module.mktime(target_utc.timetuple()) * 1000)
+
     col_q1, col_q2 = st.columns([2, 1])
     with col_q1:
         st.write(f"📊 **YouTube API Usage:** `{used:,} / {limit:,}` units")
     with col_q2:
-        st.write(f"⏳ **Reset in:** `{countdown_str}`")
+        # Real-time countdown using JavaScript
+        st.markdown(f"""
+            <div style="font-size: 14px; color: #FAFAFA;">
+                ⏳ <b>Reset in:</b> <span id="quota-timer">--h --m --s</span>
+            </div>
+            <script>
+                (function() {{
+                    const targetTime = {target_timestamp_ms};
+                    const timerElement = document.getElementById('quota-timer');
+                    
+                    function updateTimer() {{
+                        const now = new Date().getTime();
+                        const distance = targetTime - now;
+                        
+                        if (distance < 0) {{
+                            timerElement.innerHTML = "RESETTING...";
+                            return;
+                        }}
+                        
+                        const hours = Math.floor(distance / (1000 * 60 * 60));
+                        const minutes = Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60));
+                        const seconds = Math.floor((distance % (1000 * 60)) / 1000);
+                        
+                        timerElement.innerHTML = 
+                            String(hours).padStart(2, '0') + "h " + 
+                            String(minutes).padStart(2, '0') + "m " + 
+                            String(seconds).padStart(2, '0') + "s";
+                    }}
+                    
+                    if (window.quotaInterval) clearInterval(window.quotaInterval);
+                    window.quotaInterval = setInterval(updateTimer, 1000);
+                    updateTimer();
+                }})();
+            </script>
+        """, unsafe_allow_html=True)
     
     if used > 8000:
         st.progress(progress)
