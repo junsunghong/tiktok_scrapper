@@ -9,23 +9,6 @@ import random
 
 # Authentication must come FIRST before any st. commands
 # Load credentials from secrets
-
-# Global Styles
-st.markdown("""
-<style>
-.channel-link {
-    color: #00FF99 !important;
-    text-decoration: none !important;
-    font-weight: bold !important;
-}
-.channel-link:visited {
-    color: #00FF99 !important;
-}
-.channel-link:hover {
-    text-decoration: underline !important;
-}
-</style>
-""", unsafe_allow_html=True)
 name = None
 authentication_status = None
 username = None
@@ -321,7 +304,7 @@ if not st.session_state.active_hashtag:
 
 # Data Fetching (Uses Session State Hashtag)
 @st.cache_data(ttl=3600)
-def load_tiktok_data(hashtag, key, limit, v='v3'):
+def load_tiktok_data(hashtag, key, limit):
     if key:
         from real_data_fetcher import RealDataFetcher
         fetcher = RealDataFetcher(key)
@@ -341,7 +324,7 @@ def load_tiktok_data(hashtag, key, limit, v='v3'):
 
 
 @st.cache_data(ttl=3600)
-def load_youtube_data(query, youtube_key, target_results, order, video_duration, min_views, min_subscribers, page_token, v='v3'):
+def load_youtube_data(query, youtube_key, target_results, order, video_duration, min_views, min_subscribers, page_token, v='v2'):
     """Load YouTube data with auto-pagination to meet target filtered results"""
     if not youtube_key:
         return pd.DataFrame(), None, None, 0, "YouTube API", "No API Key"
@@ -372,8 +355,7 @@ if st.session_state.platform == 'TikTok':
     df, source_label, status_msg = load_tiktok_data(
         st.session_state.active_hashtag,
         final_api_key,
-        st.session_state.active_limit,
-        v='v3'
+        st.session_state.active_limit
     )
     next_token = None
     prev_token = None
@@ -402,7 +384,7 @@ else:  # YouTube
         1000, # Min Views Fixed
         1000, # Min Subscribers Fixed
         None, # Always start from beginning
-        v='v3' # Cache bust
+        v='v2' # Cache bust
     )
     
     # Update quota units based on actual cost returned (if not from cache)
@@ -438,54 +420,44 @@ if st.session_state.platform == 'YouTube':
     minutes, seconds = divmod(remainder, 60)
     fallback_str = f"{hours:02d}h {minutes:02d}m {seconds:02d}s"
 
-    col_q1, col_q2 = st.columns([2, 1])
-    with col_q1:
-        st.write(f"📊 **YouTube API Usage:** `{used:,} / {limit:,}` units")
-    with col_q2:
-        # Real-time countdown using st.components.v1.html for reliable JS execution
-        import streamlit.components.v1 as components
-        components.html(f"""
-            <div style="font-family: sans-serif; font-size: 14px; color: #FAFAFA; display: flex; align-items: center; justify-content: flex-end; height: 100%;">
-                <span style="margin-right: 5px;">⏳ <b>Reset in:</b></span>
-                <span id="timer" style="font-family: monospace; min-width: 80px;">{fallback_str}</span>
-            </div>
-            <script>
-                const targetTime = {target_timestamp_ms};
-                const timerElement = document.getElementById('timer');
+    # Real-time countdown (Positioned where usage was)
+    import streamlit.components.v1 as components
+    components.html(f"""
+        <div style="font-family: sans-serif; font-size: 14px; color: #FAFAFA; display: flex; align-items: center; justify-content: flex-start; height: 100%;">
+            <span style="margin-right: 5px;">⏳ <b>Reset in:</b></span>
+            <span id="timer" style="font-family: monospace; min-width: 80px;">{fallback_str}</span>
+        </div>
+        <script>
+            const targetTime = {target_timestamp_ms};
+            const timerElement = document.getElementById('timer');
+            
+            function updateTimer() {{
+                const now = new Date().getTime();
+                const distance = targetTime - now;
                 
-                function updateTimer() {{
-                    const now = new Date().getTime();
-                    const distance = targetTime - now;
-                    
-                    if (distance <= 0) {{
-                        timerElement.innerHTML = "RESETTING...";
-                        return;
-                    }}
-                    
-                    const hours = Math.floor(distance / (1000 * 60 * 60));
-                    const minutes = Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60));
-                    const seconds = Math.floor((distance % (1000 * 60)) / 1000);
-                    
-                    const h = String(hours).padStart(2, '0');
-                    const m = String(minutes).padStart(2, '0');
-                    const s = String(seconds).padStart(2, '0');
-                    
-                    timerElement.innerHTML = h + "h " + m + "m " + s + "s";
+                if (distance <= 0) {{
+                    timerElement.innerHTML = "RESETTING...";
+                    return;
                 }}
                 
-                setInterval(updateTimer, 1000);
-                updateTimer();
-            </script>
-            <style>
-                body {{ margin: 0; padding: 0; background-color: transparent; overflow: hidden; }}
-            </style>
-        """, height=24)
-    
-    if used > 8000:
-        st.progress(progress)
-        st.warning("⚠️ Approaching daily quota limit (10,000 units).")
-    else:
-        st.progress(progress)
+                const hours = Math.floor(distance / (1000 * 60 * 60));
+                const minutes = Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60));
+                const seconds = Math.floor((distance % (1000 * 60)) / 1000);
+                
+                const h = String(hours).padStart(2, '0');
+                const m = String(minutes).padStart(2, '0');
+                const s = String(seconds).padStart(2, '0');
+                
+                timerElement.innerHTML = h + "h " + m + "m " + s + "s";
+            }}
+            
+            setInterval(updateTimer, 1000);
+            updateTimer();
+        </script>
+        <style>
+            body {{ margin: 0; padding: 0; background-color: transparent; overflow: hidden; }}
+        </style>
+    """, height=30)
     
     if st.session_state.get('just_searched'):
         # Show breakdown to explain units (100 per search call + detail calls)
@@ -619,15 +591,7 @@ else:
                 # Channel Info
                 if st.session_state.platform == 'YouTube' and 'channel_id' in row:
                     channel_url = f"https://www.youtube.com/channel/{row['channel_id']}"
-                    st.markdown(f"👤 <a href='{channel_url}' target='_blank' class='channel-link'>{row['author']}</a>", unsafe_allow_html=True)
-                elif st.session_state.platform == 'TikTok' and 'video_url' in row:
-                    # For TikTok, extract username from video_url if possible, or just link to home
-                    try:
-                        # https://www.tiktok.com/@username/video/123 -> https://www.tiktok.com/@username
-                        profile_url = "/".join(row['video_url'].split('/')[:4])
-                        st.markdown(f"👤 <a href='{profile_url}' target='_blank' class='channel-link'>{row['author']}</a>", unsafe_allow_html=True)
-                    except:
-                        st.write(f"👤 **{row['author']}**")
+                    st.markdown(f"👤 <a href='{channel_url}' target='_blank' style='color: #00FF99 !important; text-decoration: none !important; font-weight: bold;'>{row['author']}</a>", unsafe_allow_html=True)
                 else:
                     st.write(f"👤 **{row['author']}**")
                 
@@ -668,13 +632,7 @@ else:
                 # Channel Info
                 if st.session_state.platform == 'YouTube' and 'channel_id' in row:
                     channel_url = f"https://www.youtube.com/channel/{row['channel_id']}"
-                    st.markdown(f"👤 <a href='{channel_url}' target='_blank' class='channel-link'>{row['author']}</a>", unsafe_allow_html=True)
-                elif st.session_state.platform == 'TikTok' and 'video_url' in row:
-                    try:
-                        profile_url = "/".join(row['video_url'].split('/')[:4])
-                        st.markdown(f"👤 <a href='{profile_url}' target='_blank' class='channel-link'>{row['author']}</a>", unsafe_allow_html=True)
-                    except:
-                        st.write(f"👤 **{row['author']}**")
+                    st.markdown(f"👤 <a href='{channel_url}' target='_blank' style='color: #00FF99 !important; text-decoration: none !important; font-weight: bold;'>{row['author']}</a>", unsafe_allow_html=True)
                 else:
                     st.write(f"👤 **{row['author']}**")
                 
