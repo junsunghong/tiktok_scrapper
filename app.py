@@ -403,6 +403,8 @@ if st.session_state.platform == 'YouTube':
     with col3:
         if st.button("Next Page ►") and st.session_state.get('youtube_next_token'):
             st.session_state.youtube_page_token = st.session_state.youtube_next_token
+            st.session_state.youtube_search_count += 1
+            st.session_state.just_searched = True
             st.rerun()
     
     st.divider()
