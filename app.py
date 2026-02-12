@@ -232,24 +232,16 @@ with st.sidebar:
             # Min Filters (Fixed to 1000 as per request)
             # min_views and min_subscribers inputs removed
             
-            # Min Viral Score
-            viral_score_input = st.selectbox(
-                "Min Viral Score", 
-                [1, 3, 5, 10], 
-                index=0, 
-                help="viral score = views / subscribers"
-            )
-            
-            # Target Results
-            target_results = st.selectbox("Target Results", [10, 25, 50], index=1, help="Number of filtered videos you want to see")
+            # Min Viral Score and Target Results removed as per request
+            # Fixed values: Score >= 1, Results = 25
             
             # Search Button
             search_submitted = st.form_submit_button("Search 🔎")
             
             if search_submitted:
                 st.session_state.active_hashtag = query_input
-                st.session_state.active_min_viral = viral_score_input
-                st.session_state.active_limit = target_results
+                st.session_state.active_min_viral = 1 # Fixed to 1
+                st.session_state.active_limit = 25    # Fixed to 25
                 st.session_state.youtube_order = 'date'  # Always sort by recent uploads
                 st.session_state.youtube_video_type = video_type
                 st.session_state.youtube_min_views = 1000
@@ -290,9 +282,11 @@ if not st.session_state.active_hashtag:
         st.markdown("""
         1. **Keywords**: Enter a topic like `AI automation` or `cooking hacks`.
         2. **Fixed Protection**: 
-            - **Min Views**: 1,000+ (Auto-applied)
-            - **Min Subscribers**: 1,000+ (Auto-applied)
-        3. **Target Results**: The app will auto-paginate until it finds the requested number of filtered videos.
+            - **Min Views**: 1,000+
+            - **Min Subscribers**: 1,000+
+            - **Min Viral Score**: 1.0+
+            - **Target Results**: 25 videos
+        3. **Auto-Scan**: The app will auto-paginate until it finds the requested number of filtered videos.
         
         ⚠️ **Quota Note**: YouTube API has a daily limit (approx. 10,000 units). 
         - One filtered search consumes about **100+ units** depending on pagination.
@@ -378,7 +372,7 @@ else:  # YouTube
     df, next_token, prev_token, units_used, source_label, status_msg = load_youtube_data(
         st.session_state.active_hashtag,
         youtube_key,
-        st.session_state.active_limit,
+        25, # Fixed Results
         st.session_state.get('youtube_order', 'date'),
         video_duration,
         1000, # Min Views Fixed
@@ -494,7 +488,7 @@ with st.expander("Debug: Raw Data Inspection"):
 
 # Display Data Source Status
 if platform == 'YouTube':
-    st.caption(f"Data Source: **{source_label}** (Fixed: 1k+ Views & 1k+ Subs)")
+    st.caption(f"Data Source: **{source_label}** (Fixed: 1k+ Views/Subs, Score >= 1, Results = 25)")
 else:
     st.caption(f"Data Source: **{source_label}**")
 
