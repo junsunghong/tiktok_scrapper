@@ -261,8 +261,8 @@ def load_tiktok_data(hashtag, key, limit):
 
 
 @st.cache_data(ttl=3600)
-def load_youtube_data(query, youtube_key, max_results, order, video_duration, page_token):
-    """Load YouTube data with pagination support"""
+def load_youtube_data(query, youtube_key, target_results, order, video_duration, min_views, min_subscribers, page_token):
+    """Load YouTube data with auto-pagination to meet target filtered results"""
     if not youtube_key:
         return pd.DataFrame(), None, None, "YouTube API", "No API Key"
     
@@ -271,9 +271,11 @@ def load_youtube_data(query, youtube_key, max_results, order, video_duration, pa
         fetcher = YouTubeDataFetcher(youtube_key)
         df, next_token, prev_token = fetcher.search_videos(
             query=query,
-            max_results=max_results,
+            target_results=target_results,
             order=order,
             video_duration=video_duration,
+            min_views=min_views,
+            min_subscribers=min_subscribers,
             page_token=page_token
         )
         
@@ -314,8 +316,10 @@ else:  # YouTube
         st.session_state.active_hashtag,
         youtube_key,
         st.session_state.active_limit,
-        st.session_state.get('youtube_order', 'relevance'),
+        st.session_state.get('youtube_order', 'date'),
         video_duration,
+        st.session_state.get('youtube_min_views', 0),
+        st.session_state.get('youtube_min_subscribers', 0),
         st.session_state.get('youtube_page_token')
     )
     
@@ -453,7 +457,13 @@ else:
             
             # Metrics
             st.write(f"👁️ **{row['views']:,}** Views")
-            st.write(f"👤 **{row['followers']:,}** Followers")
+            
+            # Platform-specific label
+            if st.session_state.platform == 'YouTube':
+                st.write(f"👤 **{row['followers']:,}** Subscribers")
+            else:
+                st.write(f"👤 **{row['followers']:,}** Followers")
+            
             st.write(f"🔥 **Score: {row['viral_score']}x**")
             
             with st.expander("Analysis"):
