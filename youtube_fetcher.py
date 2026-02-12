@@ -55,6 +55,7 @@ class YouTubeDataFetcher:
         all_videos = []
         current_page_token = page_token
         api_calls = 0
+        total_units = 0
         
         # Keep fetching until we have enough filtered results or hit max calls
         while len(all_videos) < target_results and api_calls < max_api_calls:
@@ -70,6 +71,7 @@ class YouTubeDataFetcher:
                 videoDuration=video_duration,
                 pageToken=current_page_token
             ).execute()
+            total_units += 100
             
             if not search_response.get('items'):
                 break
@@ -81,6 +83,7 @@ class YouTubeDataFetcher:
                 part='snippet,statistics,contentDetails',
                 id=','.join(video_ids)
             ).execute()
+            total_units += 1
             
             # Get unique channel IDs
             channel_ids = list(set([video['snippet']['channelId'] for video in videos_response['items']]))
@@ -90,6 +93,7 @@ class YouTubeDataFetcher:
                 part='statistics',
                 id=','.join(channel_ids)
             ).execute()
+            total_units += 1
             
             # Map channel_id -> subscriber_count
             subscriber_map = {}
@@ -171,4 +175,4 @@ class YouTubeDataFetcher:
         next_token = search_response.get('nextPageToken') if 'search_response' in locals() else None
         prev_token = search_response.get('prevPageToken') if 'search_response' in locals() else None
         
-        return df, next_token, prev_token
+        return df, next_token, prev_token, total_units

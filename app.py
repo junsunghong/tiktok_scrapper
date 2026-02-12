@@ -130,8 +130,20 @@ if 'active_min_viral' not in st.session_state:
     st.session_state.active_min_viral = 5.0
 if 'platform' not in st.session_state:
     st.session_state.platform = 'TikTok'
-if 'youtube_search_count' not in st.session_state:
-    st.session_state.youtube_search_count = 0
+if 'youtube_quota_used' not in st.session_state:
+    st.session_state.youtube_quota_used = 1530  # Initial value requested by user
+if 'youtube_last_reset_day' not in st.session_state:
+    from datetime import datetime, timedelta
+    # YouTube resets at midnight PT (UTC-8)
+    pt_now = datetime.utcnow() - timedelta(hours=8)
+    st.session_state.youtube_last_reset_day = pt_now.date()
+
+# Auto-reset logic: Check if current PT day is different from last reset day
+from datetime import datetime, timedelta
+pt_now = datetime.utcnow() - timedelta(hours=8)
+if pt_now.date() > st.session_state.youtube_last_reset_day:
+    st.session_state.youtube_quota_used = 0
+    st.session_state.youtube_last_reset_day = pt_now.date()
 
 # Sidebar Filters
 with st.sidebar:
@@ -232,7 +244,6 @@ with st.sidebar:
                 st.session_state.youtube_min_views = min_views
                 st.session_state.youtube_min_subscribers = min_subscribers
                 # Reset search count flag
-                st.session_state.youtube_search_count += 1
                 st.session_state.just_searched = True
                 st.rerun()
     
@@ -305,12 +316,12 @@ def load_tiktok_data(hashtag, key, limit):
 def load_youtube_data(query, youtube_key, target_results, order, video_duration, min_views, min_subscribers, page_token):
     """Load YouTube data with auto-pagination to meet target filtered results"""
     if not youtube_key:
-        return pd.DataFrame(), None, None, "YouTube API", "No API Key"
+        return pd.DataFrame(), None, None, 0, "YouTube API", "No API Key"
     
     try:
         from youtube_fetcher import YouTubeDataFetcher
         fetcher = YouTubeDataFetcher(youtube_key)
-        df, next_token, prev_token = fetcher.search_videos(
+        df, next_token, prev_token, total_units = fetcher.search_videos(
             query=query,
             target_results=target_results,
             order=order,
@@ -321,11 +332,11 @@ def load_youtube_data(query, youtube_key, target_results, order, video_duration,
         )
         
         if not df.empty:
-            return df, next_token, prev_token, "YouTube API", "Success"
+            return df, next_token, prev_token, total_units, "YouTube API", "Success"
         else:
-            return pd.DataFrame(), None, None, "YouTube API", "No Data"
+            return pd.DataFrame(), None, None, total_units, "YouTube API", "No Data"
     except Exception as e:
-        return pd.DataFrame(), None, None, "YouTube API", str(e)
+        return pd.DataFrame(), None, None, 0, "YouTube API", str(e)
 
 
 # Platform-specific data loading
@@ -353,7 +364,7 @@ else:  # YouTube
     else:
         video_duration = 'any'
     
-    df, next_token, prev_token, source_label, status_msg = load_youtube_data(
+    df, next_token, prev_token, units_used, source_label, status_msg = load_youtube_data(
         st.session_state.active_hashtag,
         youtube_key,
         st.session_state.active_limit,
@@ -363,18 +374,27 @@ else:  # YouTube
         st.session_state.get('youtube_min_subscribers', 0),
         None # Always start from beginning
     )
+    
+    # Update quota units based on actual cost returned (if not from cache)
+    if st.session_state.get('just_searched') and status_msg == "Success":
+        st.session_state.youtube_quota_used += units_used
 
 # YouTube Quota Display
 if st.session_state.platform == 'YouTube':
     # Display Quota Tracker at the top of results
-    count = st.session_state.youtube_search_count
-    progress = min(count / 50.0, 1.0)
+    used = st.session_state.youtube_quota_used
+    limit = 10000
+    progress = min(used / limit, 1.0)
     
-    st.write(f"📊 **YouTube API Usage Tracking (Today):** `{count}/50` searches")
-    st.progress(progress)
+    st.write(f"📊 **YouTube API Usage (Daily Quota):** `{used:,} / {limit:,}` units")
+    if used > 8000:
+        st.progress(progress)
+        st.warning("⚠️ Approaching daily quota limit (10,000 units).")
+    else:
+        st.progress(progress)
     
     if st.session_state.get('just_searched'):
-        st.toast(f"🚀 Search count updated: {count}/50", icon="📈")
+        st.toast(f"🚀 Quota updated: {used:,} units used", icon="📈")
         st.session_state.just_searched = False
     
     st.divider()
