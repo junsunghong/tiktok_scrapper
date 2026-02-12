@@ -9,6 +9,23 @@ import random
 
 # Authentication must come FIRST before any st. commands
 # Load credentials from secrets
+
+# Global Styles
+st.markdown("""
+<style>
+.channel-link {
+    color: #00FF99 !important;
+    text-decoration: none !important;
+    font-weight: bold !important;
+}
+.channel-link:visited {
+    color: #00FF99 !important;
+}
+.channel-link:hover {
+    text-decoration: underline !important;
+}
+</style>
+""", unsafe_allow_html=True)
 name = None
 authentication_status = None
 username = None
@@ -324,7 +341,7 @@ def load_tiktok_data(hashtag, key, limit):
 
 
 @st.cache_data(ttl=3600)
-def load_youtube_data(query, youtube_key, target_results, order, video_duration, min_views, min_subscribers, page_token, v='v2'):
+def load_youtube_data(query, youtube_key, target_results, order, video_duration, min_views, min_subscribers, page_token, v='v3'):
     """Load YouTube data with auto-pagination to meet target filtered results"""
     if not youtube_key:
         return pd.DataFrame(), None, None, 0, "YouTube API", "No API Key"
@@ -384,7 +401,7 @@ else:  # YouTube
         1000, # Min Views Fixed
         1000, # Min Subscribers Fixed
         None, # Always start from beginning
-        v='v2' # Cache bust
+        v='v3' # Cache bust
     )
     
     # Update quota units based on actual cost returned (if not from cache)
@@ -601,7 +618,15 @@ else:
                 # Channel Info
                 if st.session_state.platform == 'YouTube' and 'channel_id' in row:
                     channel_url = f"https://www.youtube.com/channel/{row['channel_id']}"
-                    st.markdown(f"👤 <a href='{channel_url}' target='_blank' style='color: #00FF99 !important; text-decoration: none !important; font-weight: bold;'>{row['author']}</a>", unsafe_allow_html=True)
+                    st.markdown(f"👤 <a href='{channel_url}' target='_blank' class='channel-link'>{row['author']}</a>", unsafe_allow_html=True)
+                elif st.session_state.platform == 'TikTok' and 'video_url' in row:
+                    # For TikTok, extract username from video_url if possible, or just link to home
+                    try:
+                        # https://www.tiktok.com/@username/video/123 -> https://www.tiktok.com/@username
+                        profile_url = "/".join(row['video_url'].split('/')[:4])
+                        st.markdown(f"👤 <a href='{profile_url}' target='_blank' class='channel-link'>{row['author']}</a>", unsafe_allow_html=True)
+                    except:
+                        st.write(f"👤 **{row['author']}**")
                 else:
                     st.write(f"👤 **{row['author']}**")
                 
@@ -642,7 +667,13 @@ else:
                 # Channel Info
                 if st.session_state.platform == 'YouTube' and 'channel_id' in row:
                     channel_url = f"https://www.youtube.com/channel/{row['channel_id']}"
-                    st.markdown(f"👤 <a href='{channel_url}' target='_blank' style='color: #00FF99 !important; text-decoration: none !important; font-weight: bold;'>{row['author']}</a>", unsafe_allow_html=True)
+                    st.markdown(f"👤 <a href='{channel_url}' target='_blank' class='channel-link'>{row['author']}</a>", unsafe_allow_html=True)
+                elif st.session_state.platform == 'TikTok' and 'video_url' in row:
+                    try:
+                        profile_url = "/".join(row['video_url'].split('/')[:4])
+                        st.markdown(f"👤 <a href='{profile_url}' target='_blank' class='channel-link'>{row['author']}</a>", unsafe_allow_html=True)
+                    except:
+                        st.write(f"👤 **{row['author']}**")
                 else:
                     st.write(f"👤 **{row['author']}**")
                 
