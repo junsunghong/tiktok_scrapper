@@ -130,18 +130,8 @@ if 'active_min_viral' not in st.session_state:
     st.session_state.active_min_viral = 5.0
 if 'platform' not in st.session_state:
     st.session_state.platform = 'TikTok'
-if 'youtube_page_token' not in st.session_state:
-    st.session_state.youtube_page_token = None
-if 'youtube_prev_token' not in st.session_state:
-    st.session_state.youtube_prev_token = None
-if 'youtube_order' not in st.session_state:
-    st.session_state.youtube_order = 'date'  # Default to recent uploads
-if 'youtube_video_type' not in st.session_state:
-    st.session_state.youtube_video_type = 'any'
 if 'youtube_search_count' not in st.session_state:
     st.session_state.youtube_search_count = 0
-if 'youtube_current_page' not in st.session_state:
-    st.session_state.youtube_current_page = 1
 
 # Sidebar Filters
 with st.sidebar:
@@ -239,14 +229,7 @@ with st.sidebar:
                 st.session_state.active_limit = target_results
                 st.session_state.youtube_order = 'date'  # Always sort by recent uploads
                 st.session_state.youtube_video_type = video_type
-                st.session_state.youtube_min_views = min_views
-                st.session_state.youtube_min_subscribers = min_subscribers
-                # Reset pagination and page tracker
-                st.session_state.youtube_page_token = None
-                st.session_state.youtube_prev_token = None
-                st.session_state.youtube_current_page = 1
-                
-                # Increment quota counter (Initial Search)
+                # Reset search count flag
                 st.session_state.youtube_search_count += 1
                 st.session_state.just_searched = True
                 st.rerun()
@@ -376,15 +359,10 @@ else:  # YouTube
         video_duration,
         st.session_state.get('youtube_min_views', 0),
         st.session_state.get('youtube_min_subscribers', 0),
-        st.session_state.get('youtube_page_token')
+        None # Always start from beginning
     )
-    
-    # Store tokens for pagination
-    if next_token or prev_token:
-        st.session_state.youtube_next_token = next_token
-        st.session_state.youtube_prev_token = prev_token
 
-# YouTube Pagination & Quota Display
+# YouTube Quota Display
 if st.session_state.platform == 'YouTube':
     # Display Quota Tracker at the top of results
     count = st.session_state.youtube_search_count
@@ -396,28 +374,6 @@ if st.session_state.platform == 'YouTube':
     if st.session_state.get('just_searched'):
         st.toast(f"🚀 Search count updated: {count}/50", icon="📈")
         st.session_state.just_searched = False
-    
-    col1, col2, col3 = st.columns([1, 3, 1])
-    
-    with col1:
-        if st.button("◄ Previous Page") and st.session_state.get('youtube_prev_token'):
-            st.session_state.youtube_page_token = st.session_state.youtube_prev_token
-            st.session_state.youtube_current_page -= 1
-            st.rerun()
-            
-    with col2:
-        st.markdown(f"<p style='text-align: center;'>Page <b>{st.session_state.youtube_current_page}</b></p>", unsafe_allow_html=True)
-    
-    with col3:
-        if st.button("Next Page ►") and st.session_state.get('youtube_next_token'):
-            st.session_state.youtube_page_token = st.session_state.youtube_next_token
-            st.session_state.youtube_current_page += 1
-            # Increment quota as this is a NEW API request for next batch
-            st.session_state.youtube_search_count += 1
-            st.session_state.just_searched = True
-            st.rerun()
-    
-    st.caption("ℹ️ *Note: Each 'Next Page' request fetches a new batch from YouTube and consumes 1 usage unit.*")
     
     st.divider()
 
