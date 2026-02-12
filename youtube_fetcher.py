@@ -106,8 +106,11 @@ class YouTubeDataFetcher:
             comments = int(statistics.get('commentCount', 0))
             
             # Duration and video type
-            duration_iso = content_details['duration']
-            duration_seconds = int(isodate.parse_duration(duration_iso).total_seconds())
+            duration_iso = content_details.get('duration', 'PT0S')
+            try:
+                duration_seconds = int(isodate.parse_duration(duration_iso).total_seconds())
+            except:
+                duration_seconds = 0  # Default to 0 if parsing fails
             video_type = 'Short' if duration_seconds < 60 else 'Long-form'
             
             # Viral score

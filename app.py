@@ -118,7 +118,7 @@ if 'youtube_page_token' not in st.session_state:
 if 'youtube_prev_token' not in st.session_state:
     st.session_state.youtube_prev_token = None
 if 'youtube_order' not in st.session_state:
-    st.session_state.youtube_order = 'relevance'
+    st.session_state.youtube_order = 'date'  # Default to recent uploads
 if 'youtube_video_type' not in st.session_state:
     st.session_state.youtube_video_type = 'any'
 
@@ -199,19 +199,6 @@ with st.sidebar:
             else:
                 video_duration = 'any'
             
-            # Sort Order
-            order = st.selectbox(
-                "Sort By",
-                options=['Relevance', 'Upload Date (Recent)', 'View Count'],
-                index=0
-            )
-            
-            order_map = {
-                'Relevance': 'relevance',
-                'Upload Date (Recent)': 'date',
-                'View Count': 'viewCount'
-            }
-            
             # Min Viral Score
             viral_score_input = st.selectbox("Min Viral Score", [1, 3, 5, 10], index=0)
             
@@ -225,7 +212,7 @@ with st.sidebar:
                 st.session_state.active_hashtag = query_input
                 st.session_state.active_min_viral = viral_score_input
                 st.session_state.active_limit = max_results
-                st.session_state.youtube_order = order_map[order]
+                st.session_state.youtube_order = 'date'  # Always sort by recent uploads
                 st.session_state.youtube_video_type = video_type
                 st.session_state.youtube_page_token = None  # Reset pagination
                 st.session_state.youtube_prev_token = None
