@@ -111,6 +111,16 @@ if 'active_hashtag' not in st.session_state:
     st.session_state.active_hashtag = None
 if 'active_min_viral' not in st.session_state:
     st.session_state.active_min_viral = 5.0
+if 'platform' not in st.session_state:
+    st.session_state.platform = 'TikTok'
+if 'youtube_page_token' not in st.session_state:
+    st.session_state.youtube_page_token = None
+if 'youtube_prev_token' not in st.session_state:
+    st.session_state.youtube_prev_token = None
+if 'youtube_order' not in st.session_state:
+    st.session_state.youtube_order = 'relevance'
+if 'youtube_video_type' not in st.session_state:
+    st.session_state.youtube_video_type = 'any'
 
 # Sidebar Filters
 with st.sidebar:
@@ -126,34 +136,104 @@ with st.sidebar:
     
     st.divider()
     
+    # Platform Selector
+    st.header("📱 Platform")
+    platform = st.selectbox(
+        "Select Platform",
+        options=['TikTok', 'YouTube'],
+        index=0 if st.session_state.platform == 'TikTok' else 1,
+        key='platform_selector'
+    )
+    
+    if platform != st.session_state.platform:
+        st.session_state.platform = platform
+        st.rerun()
+    
+    st.divider()
+    
     with st.form("search_form"):
         st.header("🔍 Filters")
         
-        # Default to previous value if exists, else default
-        default_hashtag = st.session_state.active_hashtag if st.session_state.active_hashtag else "#SaaS"
-        
-        hashtag_input = st.text_input("Niche / Hashtag", value=default_hashtag, help="Enter any hashtag (e.g. #AI, #Marketing, #Crypto)")
-        if not hashtag_input.startswith("#"):
-            hashtag_input = f"#{hashtag_input}"
+        # Common settings based on platform
+        if platform == 'TikTok':
+            # TikTok Filters
+            default_hashtag = st.session_state.active_hashtag if st.session_state.active_hashtag else "#SaaS"
             
-        # Simplified Inputs (Selectbox)
-        viral_score_input = st.selectbox("Min Viral Score", [1, 3, 5], index=0)
+            hashtag_input = st.text_input("Niche / Hashtag", value=default_hashtag, help="Enter any hashtag (e.g. #AI, #Marketing, #Crypto)")
+            if not hashtag_input.startswith("#"):
+                hashtag_input = f"#{hashtag_input}"
+                
+            # Simplified Inputs (Selectbox)
+            viral_score_input = st.selectbox("Min Viral Score", [1, 3, 5], index=0)
+            
+            # Simplified Limit (Selectbox)
+            search_limit = st.selectbox("Max Videos to Scan", [30, 50, 100], index=0)
+            
+            # Search Button
+            search_submitted = st.form_submit_button("Search 🔎")
+            
+            if search_submitted:
+                st.session_state.active_hashtag = hashtag_input
+                st.session_state.active_min_viral = viral_score_input
+                st.session_state.active_limit = search_limit
+                st.rerun()
         
-        # Simplified Limit (Selectbox)
-        search_limit = st.selectbox("Max Videos to Scan", [30, 50, 100], index=0)
-
-        # Search Button
-        search_submitted = st.form_submit_button("Search 🔎")
-        
-        if search_submitted:
-            st.session_state.active_hashtag = hashtag_input
-            st.session_state.active_min_viral = viral_score_input
-            st.session_state.active_limit = search_limit
-            st.rerun()
-
+        else:  # YouTube
+            # YouTube Filters
+            default_query = st.session_state.active_hashtag if st.session_state.active_hashtag else "AI"
+            
+            query_input = st.text_input("Search Keywords", value=default_query, help="Enter keywords or hashtags (e.g. AI, #tech)")
+            
+            # Video Type
+            video_type = st.selectbox(
+                "Video Type",
+                options=['All Videos', 'Shorts Only (<60s)', 'Long-form (≥60s)'],
+                index=0
+            )
+            
+            # Map to API parameter
+            if video_type == 'Shorts Only (<60s)':
+                video_duration = 'short'  # < 4 min (we'll filter < 60s in code)
+            elif video_type == 'Long-form (≥60s)':
+                video_duration = 'medium'  # Or 'long' - we'll include both
+            else:
+                video_duration = 'any'
+            
+            # Sort Order
+            order = st.selectbox(
+                "Sort By",
+                options=['Relevance', 'Upload Date (Recent)', 'View Count'],
+                index=0
+            )
+            
+            order_map = {
+                'Relevance': 'relevance',
+                'Upload Date (Recent)': 'date',
+                'View Count': 'viewCount'
+            }
+            
+            # Min Viral Score
+            viral_score_input = st.selectbox("Min Viral Score", [1, 3, 5, 10], index=0)
+            
+            # Max Results
+            max_results = st.selectbox("Results per Page", [10, 25, 50], index=1)
+            
+            # Search Button
+            search_submitted = st.form_submit_button("Search 🔎")
+            
+            if search_submitted:
+                st.session_state.active_hashtag = query_input
+                st.session_state.active_min_viral = viral_score_input
+                st.session_state.active_limit = max_results
+                st.session_state.youtube_order = order_map[order]
+                st.session_state.youtube_video_type = video_type
+                st.session_state.youtube_page_token = None  # Reset pagination
+                st.session_state.youtube_prev_token = None
+                st.rerun()
+    
     # Initialize new session state defaults if they don't exist
     if 'active_limit' not in st.session_state:
-        st.session_state.active_limit = 30
+        st.session_state.active_limit = 30 if platform == 'TikTok' else 25
 
     st.success(f"✅ Filter: Score > {st.session_state.active_min_viral} | Limit: {st.session_state.active_limit}")
 
@@ -174,7 +254,7 @@ if not st.session_state.active_hashtag:
 
 # Data Fetching (Uses Session State Hashtag)
 @st.cache_data(ttl=3600)
-def load_data(hashtag, key, limit):
+def load_tiktok_data(hashtag, key, limit):
     if key:
         from real_data_fetcher import RealDataFetcher
         fetcher = RealDataFetcher(key)
@@ -182,25 +262,112 @@ def load_data(hashtag, key, limit):
             # Always use Default Sort (0)
             data = fetcher.fetch_posts(hashtag, limit=limit, sort_type=0)
             if not data.empty:
-                return data, "Real API", "Success"
+                return data, "TikTok API", "Success"
             else:
-                return pd.DataFrame(), "Real API", "No Data"
+                return pd.DataFrame(), "TikTok API", "No Data"
         except Exception as e:
-            return pd.DataFrame(), "Real API", str(e)
+            return pd.DataFrame(), "TikTok API", str(e)
             
     # Fallback or Mock
     fetcher = MockDataFetcher()
     return fetcher.fetch_posts(hashtag, limit=limit), "Mock Data", "Success"
 
-df, source_label, status_msg = load_data(st.session_state.active_hashtag, final_api_key, st.session_state.active_limit)
+
+@st.cache_data(ttl=3600)
+def load_youtube_data(query, youtube_key, max_results, order, video_duration, page_token):
+    """Load YouTube data with pagination support"""
+    if not youtube_key:
+        return pd.DataFrame(), None, None, "YouTube API", "No API Key"
+    
+    try:
+        from youtube_fetcher import YouTubeDataFetcher
+        fetcher = YouTubeDataFetcher(youtube_key)
+        df, next_token, prev_token = fetcher.search_videos(
+            query=query,
+            max_results=max_results,
+            order=order,
+            video_duration=video_duration,
+            page_token=page_token
+        )
+        
+        if not df.empty:
+            return df, next_token, prev_token, "YouTube API", "Success"
+        else:
+            return pd.DataFrame(), None, None, "YouTube API", "No Data"
+    except Exception as e:
+        return pd.DataFrame(), None, None, "YouTube API", str(e)
+
+
+# Platform-specific data loading
+if st.session_state.platform == 'TikTok':
+    df, source_label, status_msg = load_tiktok_data(
+        st.session_state.active_hashtag,
+        final_api_key,
+        st.session_state.active_limit
+    )
+    next_token = None
+    prev_token = None
+else:  # YouTube
+    # Get YouTube API key from secrets
+    try:
+        youtube_key = st.secrets["general"]["youtube_api_key"]
+    except:
+        youtube_key = None
+    
+    # Determine video_duration from session state
+    video_type_filter = st.session_state.get('youtube_video_type', 'All Videos')
+    if 'Shorts' in video_type_filter:
+        video_duration = 'short'
+    elif 'Long-form' in video_type_filter:
+        video_duration = 'medium'
+    else:
+        video_duration = 'any'
+    
+    df, next_token, prev_token, source_label, status_msg = load_youtube_data(
+        st.session_state.active_hashtag,
+        youtube_key,
+        st.session_state.active_limit,
+        st.session_state.get('youtube_order', 'relevance'),
+        video_duration,
+        st.session_state.get('youtube_page_token')
+    )
+    
+    # Store tokens for pagination
+    if next_token or prev_token:
+        st.session_state.youtube_next_token = next_token
+        st.session_state.youtube_prev_token = prev_token
+
+# YouTube Pagination Controls
+if st.session_state.platform == 'YouTube':
+    col1, col2, col3 = st.columns([1, 3, 1])
+    
+    with col1:
+        if st.button("◄ Previous Page") and st.session_state.get('youtube_prev_token'):
+            st.session_state.youtube_page_token = st.session_state.youtube_prev_token
+            st.rerun()
+    
+    with col3:
+        if st.button("Next Page ►") and st.session_state.get('youtube_next_token'):
+            st.session_state.youtube_page_token = st.session_state.youtube_next_token
+            st.rerun()
+    
+    st.divider()
+
+# Filter YouTube Shorts by actual 60s threshold
+if st.session_state.platform == 'YouTube' and not df.empty:
+    video_type_filter = st.session_state.get('youtube_video_type', 'All Videos')
+    if 'Shorts' in video_type_filter and 'duration_seconds' in df.columns:
+        df = df[df['duration_seconds'] < 60].copy()
+    elif 'Long-form' in video_type_filter and 'duration_seconds' in df.columns:
+        df = df[df['duration_seconds'] >= 60].copy()
 
 if status_msg == "Success":
-    if source_label == "Real API":
-        st.toast(f"✅ Loaded {len(df)} items from Real API!", icon="📡")
+    if "API" in source_label:
+        st.toast(f"✅ Loaded {len(df)} items from {source_label}!", icon="📡")
     else:
         st.toast("Using Mock Data", icon="🤖")
 elif status_msg == "No Data":
-    st.toast("⚠️ Real API returned no data. Check API Key or Hashtag.", icon="❌")
+    st.toast(f"⚠️ {source_label} returned no data. Check API Key or search query.", icon="❌")
 else:
     st.error(f"API Error: {status_msg}")
 
@@ -220,29 +387,27 @@ too_old_count = 0
 low_score_count = 0
 
 if not df.empty and 'viral_score' in df.columns:
-    # 1. Date Filter (90 days)
-    # We need to parse date if it's string, but fetcher returns string in 'date' col.
-    # Actually fetcher doesn't return date obj, it returns str.
-    # Let's rely on 'days_old' logic? Fetcher code modification didn't add 'days_old' column.
-    # I should have added 'days_old' to the DF in the previous step. 
-    # Wait, I didn't add it. I need to calculate it here or assume 'date' is usable.
-    # 'date' is YYYY-MM-DD.
-    from datetime import datetime
-    
-    # Add days_old column for debug/filtering
-    df['post_date_obj'] = pd.to_datetime(df['date'])
-    df['days_old'] = (datetime.now() - df['post_date_obj']).dt.days
-    
-    # Filter: Too Old (> 90 days)
-    recent_df = df[df['days_old'] <= 90]
-    too_old_count = len(df) - len(recent_df)
-    
-    # Filter: Low Score
-    if not recent_df.empty:
-        filtered_df = recent_df[recent_df['viral_score'] >= st.session_state.active_min_viral].sort_values(by='viral_score', ascending=False)
-        low_score_count = len(recent_df) - len(filtered_df)
-    else:
-        filtered_df = pd.DataFrame()
+    # 1. Date Filter (90 days) - only for TikTok
+    if st.session_state.platform == 'TikTok':
+        from datetime import datetime
+        
+        # Add days_old column for debug/filtering
+        df['post_date_obj'] = pd.to_datetime(df['date'])
+        df['days_old'] = (datetime.now() - df['post_date_obj']).dt.days
+        
+        # Filter: Too Old (> 90 days)
+        recent_df = df[df['days_old'] <= 90]
+        too_old_count = len(df) - len(recent_df)
+        
+        # Filter: Low Score
+        if not recent_df.empty:
+            filtered_df = recent_df[recent_df['viral_score'] >= st.session_state.active_min_viral].sort_values(by='viral_score', ascending=False)
+            low_score_count = len(recent_df) - len(filtered_df)
+        else:
+            filtered_df = pd.DataFrame()
+    else:  # YouTube - no date filter, just viral score
+        filtered_df = df[df['viral_score'] >= st.session_state.active_min_viral].sort_values(by='viral_score', ascending=False)
+        low_score_count = len(df) - len(filtered_df)
 
 # Display Stats
 col1, col2, col3, col4 = st.columns(4)

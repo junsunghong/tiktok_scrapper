@@ -3,3 +3,5 @@ pandas
 plotly
 requests
 streamlit-authenticator
+google-api-python-client
+isodate
