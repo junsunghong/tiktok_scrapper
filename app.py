@@ -102,6 +102,18 @@ st.markdown("""
         font-size: 0.8em;
         font-weight: bold;
     }
+    
+    /* Style selectbox choice text with mint color */
+    div[data-baseweb="select"] span {
+        color: #00FF99 !important;
+        font-weight: 600 !important;
+    }
+    
+    /* Style the input labels for better visibility */
+    label p {
+        color: #FFF !important;
+        font-weight: 700 !important;
+    }
 </style>
 """, unsafe_allow_html=True)
 
@@ -199,12 +211,9 @@ with st.sidebar:
             else:
                 video_duration = 'any'
             
-            # Min Filters
-            col1, col2 = st.columns(2)
-            with col1:
-                min_views = st.number_input("Min Views", min_value=0, value=0, step=1000, help="Minimum view count")
-            with col2:
-                min_subscribers = st.number_input("Min Subscribers", min_value=0, value=0, step=1000, help="Minimum channel subscribers")
+            # Min Filters (Stacked for better layout)
+            min_views = st.number_input("Min Views", min_value=0, value=0, step=1000, help="Minimum view count")
+            min_subscribers = st.number_input("Min Subscribers", min_value=0, value=0, step=1000, help="Minimum channel subscribers")
             
             # Min Viral Score
             viral_score_input = st.selectbox("Min Viral Score", [1, 3, 5, 10], index=0)
