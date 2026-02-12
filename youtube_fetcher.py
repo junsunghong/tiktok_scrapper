@@ -146,6 +146,7 @@ class YouTubeDataFetcher:
                     'id': video_id,
                     'title': title,
                     'author': channel_title,
+                    'channel_id': channel_id,
                     'hashtag': query,
                     'followers': subscribers,  # Keep 'followers' for compatibility, rename in display
                     'views': views,

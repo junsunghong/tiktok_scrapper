@@ -4,6 +4,7 @@ from data_fetcher import MockDataFetcher
 import streamlit_authenticator as stauth
 import yaml
 from yaml.loader import SafeLoader
+import calendar
 
 # Authentication must come FIRST before any st. commands
 # Load credentials from secrets
@@ -396,16 +397,17 @@ if st.session_state.platform == 'YouTube':
     if now_utc >= target_utc:
         target_utc += timedelta(days=1)
     
-    target_timestamp_ms = int(time_module.mktime(target_utc.timetuple()) * 1000)
+    # Use calendar.timegm for reliable UTC epoch conversion
+    target_timestamp_ms = int(calendar.timegm(target_utc.utctimetuple()) * 1000)
 
     col_q1, col_q2 = st.columns([2, 1])
     with col_q1:
         st.write(f"📊 **YouTube API Usage:** `{used:,} / {limit:,}` units")
     with col_q2:
-        # Real-time countdown using JavaScript
+        # Real-time countdown using JavaScript with a more robust script
         st.markdown(f"""
             <div style="font-size: 14px; color: #FAFAFA;">
-                ⏳ <b>Reset in:</b> <span id="quota-timer">--h --m --s</span>
+                ⏳ <b>Reset in:</b> <span id="quota-timer">Calculating...</span>
             </div>
             <script>
                 (function() {{
@@ -416,8 +418,9 @@ if st.session_state.platform == 'YouTube':
                         const now = new Date().getTime();
                         const distance = targetTime - now;
                         
-                        if (distance < 0) {{
+                        if (distance <= 0) {{
                             timerElement.innerHTML = "RESETTING...";
+                            // Suggest reload if reset reached
                             return;
                         }}
                         
@@ -425,13 +428,18 @@ if st.session_state.platform == 'YouTube':
                         const minutes = Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60));
                         const seconds = Math.floor((distance % (1000 * 60)) / 1000);
                         
-                        timerElement.innerHTML = 
-                            String(hours).padStart(2, '0') + "h " + 
-                            String(minutes).padStart(2, '0') + "m " + 
-                            String(seconds).padStart(2, '0') + "s";
+                        // Using template literals for padding
+                        const h = String(hours).padStart(2, '0');
+                        const m = String(minutes).padStart(2, '0');
+                        const s = String(seconds).padStart(2, '0');
+                        
+                        timerElement.innerHTML = h + "h " + m + "m " + s + "s";
                     }}
                     
-                    if (window.quotaInterval) clearInterval(window.quotaInterval);
+                    // Clear any existing interval to prevent duplicates on rerender
+                    if (window.quotaInterval) {{
+                        clearInterval(window.quotaInterval);
+                    }}
                     window.quotaInterval = setInterval(updateTimer, 1000);
                     updateTimer();
                 }})();
@@ -564,7 +572,16 @@ else:
                 """, unsafe_allow_html=True)
                 
                 st.subheader(f"{row['virality_label']}")
+                
+                # Title
                 st.write(f"**[{row['title']}]({link})**")
+                
+                # Channel Info
+                if st.session_state.platform == 'YouTube' and 'channel_id' in row:
+                    channel_url = f"https://www.youtube.com/channel/{row['channel_id']}"
+                    st.markdown(f"👤 <a href='{channel_url}' target='_blank' style='color: #00FF99; text-decoration: none; font-weight: bold;'>{row['author']}</a>", unsafe_allow_html=True)
+                else:
+                    st.write(f"👤 **{row['author']}**")
                 
                 # Metrics
                 st.write(f"👁️ **{row['views']:,}** Views")
@@ -597,7 +614,15 @@ else:
                 </a>
                 """, unsafe_allow_html=True)
                 
+                # Title
                 st.write(f"**[{row['title']}]({link})**")
+                
+                # Channel Info
+                if st.session_state.platform == 'YouTube' and 'channel_id' in row:
+                    channel_url = f"https://www.youtube.com/channel/{row['channel_id']}"
+                    st.markdown(f"👤 <a href='{channel_url}' target='_blank' style='color: #00FF99; text-decoration: none; font-weight: bold;'>{row['author']}</a>", unsafe_allow_html=True)
+                else:
+                    st.write(f"👤 **{row['author']}**")
                 
                 # Metrics
                 st.write(f"👁️ **{row['views']:,}** Views")
