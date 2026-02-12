@@ -140,6 +140,8 @@ if 'youtube_video_type' not in st.session_state:
     st.session_state.youtube_video_type = 'any'
 if 'youtube_search_count' not in st.session_state:
     st.session_state.youtube_search_count = 0
+if 'youtube_current_page' not in st.session_state:
+    st.session_state.youtube_current_page = 1
 
 # Sidebar Filters
 with st.sidebar:
@@ -239,10 +241,12 @@ with st.sidebar:
                 st.session_state.youtube_video_type = video_type
                 st.session_state.youtube_min_views = min_views
                 st.session_state.youtube_min_subscribers = min_subscribers
-                st.session_state.youtube_page_token = None  # Reset pagination
+                # Reset pagination and page tracker
+                st.session_state.youtube_page_token = None
                 st.session_state.youtube_prev_token = None
+                st.session_state.youtube_current_page = 1
                 
-                # Increment quota counter
+                # Increment quota counter (Initial Search)
                 st.session_state.youtube_search_count += 1
                 st.session_state.just_searched = True
                 st.rerun()
@@ -398,14 +402,22 @@ if st.session_state.platform == 'YouTube':
     with col1:
         if st.button("◄ Previous Page") and st.session_state.get('youtube_prev_token'):
             st.session_state.youtube_page_token = st.session_state.youtube_prev_token
+            st.session_state.youtube_current_page -= 1
             st.rerun()
+            
+    with col2:
+        st.markdown(f"<p style='text-align: center;'>Page <b>{st.session_state.youtube_current_page}</b></p>", unsafe_allow_html=True)
     
     with col3:
         if st.button("Next Page ►") and st.session_state.get('youtube_next_token'):
             st.session_state.youtube_page_token = st.session_state.youtube_next_token
+            st.session_state.youtube_current_page += 1
+            # Increment quota as this is a NEW API request for next batch
             st.session_state.youtube_search_count += 1
             st.session_state.just_searched = True
             st.rerun()
+    
+    st.caption("ℹ️ *Note: Each 'Next Page' request fetches a new batch from YouTube and consumes 1 usage unit.*")
     
     st.divider()
 
