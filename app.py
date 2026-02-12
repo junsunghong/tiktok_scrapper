@@ -138,6 +138,8 @@ if 'youtube_order' not in st.session_state:
     st.session_state.youtube_order = 'date'  # Default to recent uploads
 if 'youtube_video_type' not in st.session_state:
     st.session_state.youtube_video_type = 'any'
+if 'youtube_search_count' not in st.session_state:
+    st.session_state.youtube_search_count = 50
 
 # Sidebar Filters
 with st.sidebar:
@@ -239,6 +241,9 @@ with st.sidebar:
                 st.session_state.youtube_min_subscribers = min_subscribers
                 st.session_state.youtube_page_token = None  # Reset pagination
                 st.session_state.youtube_prev_token = None
+                
+                # Increment quota counter
+                st.session_state.youtube_search_count += 1
                 st.rerun()
     
     # Initialize new session state defaults if they don't exist
@@ -259,7 +264,30 @@ else:
 
 # Main Execution Flow
 if not st.session_state.active_hashtag:
-    st.info("👈 Please enter a Hashtag and click **Search** in the sidebar to start!")
+    if platform == 'TikTok':
+        st.info("### 🎵 TikTok Discovery Guide")
+        st.markdown("""
+        1. **Hashtag**: Enter a niche like `#SaaS`, `#AI`, or `#Marketing`.
+        2. **Min Viral Score**: Set to **5x** or higher to find real "gems".
+        3. **Search**: Click **Search 🔎** to scan recent TikTok posts.
+        
+        *👈 Get started by entering a hashtag in the sidebar!*
+        """)
+    else:
+        st.info("### 📺 YouTube Discovery Guide")
+        st.markdown("""
+        1. **Keywords**: Enter a topic like `AI automation` or `cooking hacks`.
+        2. **Filters**: 
+            - Use **Min Views** to filter out low-reach videos.
+            - Use **Min Subscribers** to find small channels going viral.
+        3. **Target Results**: The app will auto-paginate until it finds the requested number of filtered videos.
+        
+        ⚠️ **Quota Note**: YouTube API has a daily limit (approx. 10,000 units). 
+        - One filtered search consumes about **100+ units** depending on pagination.
+        - Monitor your usage via the counter at the top of results.
+        
+        *👈 Get started by entering keywords in the sidebar!*
+        """)
     st.stop()
 
 # Data Fetching (Uses Session State Hashtag)
@@ -351,8 +379,11 @@ else:  # YouTube
         st.session_state.youtube_next_token = next_token
         st.session_state.youtube_prev_token = prev_token
 
-# YouTube Pagination Controls
+# YouTube Pagination & Quota Display
 if st.session_state.platform == 'YouTube':
+    # Display Quota Tracker at the top of results
+    st.warning(f"📊 **YouTube API Usage Tracking (Today):** `{st.session_state.youtube_search_count}` units consumed")
+    
     col1, col2, col3 = st.columns([1, 3, 1])
     
     with col1:
